@@ -1,19 +1,15 @@
 use bevy::{
-    prelude::*,
     core_pipeline::clear_color::ClearColorConfig,
-    render::{camera::Viewport, view::RenderLayers}
+    prelude::*,
+    render::{camera::Viewport, view::RenderLayers},
 };
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
-use rand::{Rng, thread_rng};
-use std::{
-    f32::consts::PI,
-    time::Duration
-};
+use rand::{thread_rng, Rng};
+use std::{f32::consts::PI, time::Duration};
 
 use super::{
     game::{
-        // systems
         animation,
         bullet_timer,
         button_system,
@@ -25,16 +21,20 @@ use super::{
         star_node_shoot,
         update_minimap,
         world_to_minimap,
-        
-        // components
+
         Animation,
         CameraOffset,
         Collidable,
         Countdown,
         CountdownText,
         EnemyShip,
+        EnemyType,
         Explodable,
+        ExplodableType,
+        ExplosionEvent,
+        ExplosionSize,
         GameButton,
+        GameButtonAction,
         GameCamera,
         GameNode,
         IType,
@@ -42,21 +42,12 @@ use super::{
         MinimapCamera,
         MinimapPlayer,
         MinimapStar,
-        Player,
         PType,
-        StarCore,
-        StarNode,
-        
-        // enums
-        EnemyType,
-        ExplodableType,
-        ExplosionSize,
-        GameButtonAction,
-        
-        // events
-        ExplosionEvent,
+        Player,
         PlayerDeathEvent,
         SetupLevel,
+        StarCore,
+        StarNode,
     },
     levels, AppState, GameAssets,
 };
@@ -111,7 +102,7 @@ enum GameState {
     Setup,
     Countdown,
     Play,
-    GameOver
+    GameOver,
 }
 
 pub struct ClassicPlugin;
@@ -140,7 +131,7 @@ impl Plugin for ClassicPlugin {
                     star_update,
                     update_minimap,
                 )
-                .run_if(in_state(GameState::Play)),
+                    .run_if(in_state(GameState::Play)),
             )
             .add_systems(
                 Update,
@@ -152,10 +143,7 @@ impl Plugin for ClassicPlugin {
                 )
                     .run_if(not(in_state(GameState::None))),
             )
-            .add_systems(
-                Update,
-                setup_level.run_if(in_state(GameState::Setup))
-            );
+            .add_systems(Update, setup_level.run_if(in_state(GameState::Setup)));
     }
 }
 
@@ -187,7 +175,7 @@ fn setup_game(
         UiCameraConfig { show_ui: true },
         GameCamera,
         RenderLayers::from_layers(&[0]),
-        GameNode
+        GameNode,
     ));
 
     // minimap / ui camera
@@ -210,7 +198,7 @@ fn setup_game(
         UiCameraConfig { show_ui: false },
         MinimapCamera,
         RenderLayers::from_layers(&[1]),
-        GameNode
+        GameNode,
     ));
 
     // lives camera
@@ -232,7 +220,7 @@ fn setup_game(
         },
         UiCameraConfig { show_ui: false },
         RenderLayers::from_layers(&[2]),
-        GameNode
+        GameNode,
     ));
 
     // background tiles
@@ -245,7 +233,7 @@ fn setup_game(
                     ..default()
                 },
                 RenderLayers::layer(0),
-                GameNode
+                GameNode,
             ));
         }
     }
@@ -269,7 +257,7 @@ fn setup_game(
         ]),
         Collidable,
         RenderLayers::layer(0),
-        GameNode
+        GameNode,
     ));
 
     // level text
@@ -299,7 +287,7 @@ fn setup_game(
             ..default()
         }),
         LevelText,
-        GameNode
+        GameNode,
     ));
 
     // minimap player
@@ -315,7 +303,7 @@ fn setup_game(
         Fill::color(Color::WHITE),
         MinimapPlayer,
         RenderLayers::layer(1),
-        GameNode
+        GameNode,
     ));
 
     // Game resource
@@ -355,13 +343,19 @@ fn setup_game(
             start_i: levels::LEVEL_3.start_i,
             max_i: levels::LEVEL_3.max_i,
             start_p: levels::LEVEL_3.start_p,
-            max_p: levels::LEVEL_3.max_p,            
+            max_p: levels::LEVEL_3.max_p,
             time_limit: levels::LEVEL_3.time_limit,
-        }
+        },
     ]));
 
-    commands.spawn((Countdown(Timer::from_seconds(0.01, TimerMode::Repeating)), GameNode));
-    commands.spawn((SetupTimer(Timer::from_seconds(0.01, TimerMode::Repeating)), GameNode));
+    commands.spawn((
+        Countdown(Timer::from_seconds(0.01, TimerMode::Repeating)),
+        GameNode,
+    ));
+    commands.spawn((
+        SetupTimer(Timer::from_seconds(0.01, TimerMode::Repeating)),
+        GameNode,
+    ));
 
     game_state.set(GameState::Setup);
     level_events.send(SetupLevel);
@@ -380,7 +374,7 @@ fn setup_gameover(
     } else {
         game_assets.game_over.clone()
     };
-        
+
     commands.spawn((
         SpriteBundle {
             texture,
@@ -460,10 +454,10 @@ fn setup_level(
         for mut mm_trans in q_mm_player.iter_mut() {
             mm_trans.translation = world_to_minimap(Vec3::ZERO);
         }
-        
+
         if game.level > levels::MAX_LEVEL {
             game_state.set(GameState::GameOver);
-        } else {            
+        } else {
             game_state.set(GameState::Countdown);
         }
     }
@@ -505,21 +499,29 @@ fn countdown(
                 let level = &levels.0[game.level - 1];
 
                 let mut i_count = 0;
-                for _ in q_i_type.iter() { i_count += 1; }
-                
+                for _ in q_i_type.iter() {
+                    i_count += 1;
+                }
+
                 let mut i_to_kill = level.start_i as isize - i_count as isize;
                 for ent in q_i_type.iter() {
-                    if i_to_kill < 1 { break; }
+                    if i_to_kill < 1 {
+                        break;
+                    }
                     commands.entity(ent).despawn();
                     i_to_kill -= 1;
                 }
-                
+
                 let mut p_count = 0;
-                for _ in q_p_type.iter() { p_count += 1; }
+                for _ in q_p_type.iter() {
+                    p_count += 1;
+                }
 
                 let mut p_to_kill = level.start_p as isize - p_count as isize;
                 for ent in q_p_type.iter() {
-                    if p_to_kill < 1 { break; }
+                    if p_to_kill < 1 {
+                        break;
+                    }
                     commands.entity(ent).despawn();
                     p_to_kill -= 1;
                 }
@@ -557,9 +559,9 @@ fn countdown(
 
                 if game.setup {
                     game.setup = false;
-                
+
                     let level = &levels.0[game.level - 1];
-                        
+
                     for star in &level.stars {
                         let marker = commands
                             .spawn((
@@ -569,7 +571,9 @@ fn countdown(
                                         center: Vec2::ZERO,
                                     }),
                                     transform: Transform {
-                                        translation: world_to_minimap(Vec3::new(star.x, star.y, 3.0)),
+                                        translation: world_to_minimap(Vec3::new(
+                                            star.x, star.y, 3.0,
+                                        )),
                                         ..default()
                                     },
                                     ..default()
@@ -582,32 +586,69 @@ fn countdown(
                             ))
                             .id();
 
-                        let star_config: (Handle<Image>, [(Vec3, Handle<TextureAtlas>); 6]) = if star.vert {
-                            (
-                                game_assets.v_star.clone(),
-                                [
-                                    (Vec3::new(48.0, 96.0, 1.0), game_assets.star_node_v1.clone()),
-                                    (Vec3::new(112.0, 0.0, 1.0), game_assets.star_node_v2.clone()),
-                                    (Vec3::new(48.0, -96.0, 1.0), game_assets.star_node_v3.clone()),
-                                    (Vec3::new(-48.0, -96.0, 1.0), game_assets.star_node_v4.clone()),
-                                    (Vec3::new(-112.0, 0.0, 1.0), game_assets.star_node_v5.clone()),
-                                    (Vec3::new(-48.0, 96.0, 1.0), game_assets.star_node_v6.clone()),
-                                ]
-                            )
-                        } else {
-                            (
-                                game_assets.h_star.clone(),
-                                [
-                                    (Vec3::new(96.0, -48.0, 1.0), game_assets.star_node_h1.clone()),
-                                    (Vec3::new(0.0, -112.0, 1.0), game_assets.star_node_h2.clone()),
-                                    (Vec3::new(-96.0, -48.0, 1.0), game_assets.star_node_h3.clone()),
-                                    (Vec3::new(-96.0, 48.0, 1.0), game_assets.star_node_h4.clone()),
-                                    (Vec3::new(0.0, 112.0, 1.0), game_assets.star_node_h5.clone()),
-                                    (Vec3::new(96.0, 48.0, 1.0), game_assets.star_node_h6.clone()),
-                                ]
-                            )
-                        };
-                
+                        let star_config: (Handle<Image>, [(Vec3, Handle<TextureAtlas>); 6]) =
+                            if star.vert {
+                                (
+                                    game_assets.v_star.clone(),
+                                    [
+                                        (
+                                            Vec3::new(48.0, 96.0, 1.0),
+                                            game_assets.star_node_v1.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(112.0, 0.0, 1.0),
+                                            game_assets.star_node_v2.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(48.0, -96.0, 1.0),
+                                            game_assets.star_node_v3.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(-48.0, -96.0, 1.0),
+                                            game_assets.star_node_v4.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(-112.0, 0.0, 1.0),
+                                            game_assets.star_node_v5.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(-48.0, 96.0, 1.0),
+                                            game_assets.star_node_v6.clone(),
+                                        ),
+                                    ],
+                                )
+                            } else {
+                                (
+                                    game_assets.h_star.clone(),
+                                    [
+                                        (
+                                            Vec3::new(96.0, -48.0, 1.0),
+                                            game_assets.star_node_h1.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(0.0, -112.0, 1.0),
+                                            game_assets.star_node_h2.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(-96.0, -48.0, 1.0),
+                                            game_assets.star_node_h3.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(-96.0, 48.0, 1.0),
+                                            game_assets.star_node_h4.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(0.0, 112.0, 1.0),
+                                            game_assets.star_node_h5.clone(),
+                                        ),
+                                        (
+                                            Vec3::new(96.0, 48.0, 1.0),
+                                            game_assets.star_node_h6.clone(),
+                                        ),
+                                    ],
+                                )
+                            };
+
                         commands
                             .spawn((
                                 SpriteBundle {
@@ -628,7 +669,7 @@ fn countdown(
                                 GameNode,
                                 Name::from("STAR"),
                             ))
-                            .with_children(|parent| {                
+                            .with_children(|parent| {
                                 for (pos, texture) in star_config.1 {
                                     parent
                                         .spawn((
@@ -660,7 +701,7 @@ fn countdown(
                                 }
                             });
                     }
-                
+
                     for rock in &level.rocks {
                         let texture = if rock.mine {
                             game_assets.mine.clone()
@@ -716,7 +757,7 @@ fn countdown(
                     },
                     CountdownText,
                     LevelNode,
-                    GameNode
+                    GameNode,
                 ));
             }
 
@@ -783,10 +824,14 @@ fn spawn_enemy_ships(
     }
 
     let mut i_count = 0;
-    for _ in q_i_type.iter() { i_count += 1; }
-    
+    for _ in q_i_type.iter() {
+        i_count += 1;
+    }
+
     let mut p_count = 0;
-    for _ in q_p_type.iter() { p_count += 1; }
+    for _ in q_p_type.iter() {
+        p_count += 1;
+    }
 
     if i_count < max_i && game.itype_timer.finished() {
         if let Ok(offset) = q_cam_offest.get_single() {
@@ -816,7 +861,7 @@ fn spawn_enemy_ships(
                     time_got_target: None,
                     max_time_on_target: 0.25,
                     speed: 300.0,
-                    turn_radius: 0.05
+                    turn_radius: 0.05,
                 },
                 CollisionGroups::new(
                     Group::from_bits_truncate(0b0000100),
@@ -859,7 +904,7 @@ fn spawn_enemy_ships(
                     time_got_target: None,
                     max_time_on_target: 3.0,
                     speed: 250.0,
-                    turn_radius: 0.02
+                    turn_radius: 0.02,
                 },
                 CollisionGroups::new(
                     Group::from_bits_truncate(0b0000100),
@@ -893,7 +938,7 @@ fn listen_update_lives(
                     texture: game_assets.life.clone(),
                     transform: Transform {
                         translation: Vec3::new(
-                            (1000.0 / 2.0) - 2.0 - (46.0 / 2.0) + ((-48.0 * i as f32)),
+                            (1000.0 / 2.0) - 2.0 - (46.0 / 2.0) + (-48.0 * i as f32),
                             (750.0 / 2.0) - (46.0 / 2.0),
                             0.0,
                         ),
@@ -918,17 +963,16 @@ fn listen_player_death(
 ) {
     for _ in events.iter() {
         game.lives -= 1;
-        
+
         let mut cam = minimap.get_single_mut().unwrap();
         cam.is_active = false;
         for mut mm_trans in q_mm_player.iter_mut() {
             mm_trans.translation = world_to_minimap(Vec3::ZERO);
         }
-        
+
         if game.lives > 0 {
             game.countdown = 4;
             game_state.set(GameState::Countdown);
-            
         } else {
             game_state.set(GameState::GameOver);
         }

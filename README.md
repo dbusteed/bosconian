@@ -2,7 +2,7 @@
 
 My take on the classic arcade game, [Bosconian](https://en.wikipedia.org/wiki/Bosconian). Built with [Bevy](https://bevyengine.org/).
 
-Play at [https://dbusteed.github.io/bosconian](https://dbusteed.github.io/bosconian), or run locally with `cargo run --release`./wa
+Play at [https://dbusteed.github.io/bosconian](https://dbusteed.github.io/bosconian), or run locally with `cargo run --release`.
 
 <br>
 
@@ -21,11 +21,10 @@ Play at [https://dbusteed.github.io/bosconian](https://dbusteed.github.io/boscon
     - more levels
     - formations
 - Endless
-    - add ptype
     - star spawn
         - dynamic max stars
         - better spawn locations
-    - pick up time bonuses
+    - pick up time bonuses (maybe bonuses just come from destorying ships)
     - more and more fighters, spawn off screen so no timer necessary
     - random rocks
     - enemy ship drops mines

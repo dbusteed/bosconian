@@ -1,11 +1,14 @@
+use super::{AppState, GameAssets};
 use bevy::{
     audio::{Volume, VolumeLevel},
     prelude::*,
 };
 use bevy_rapier2d::prelude::*;
 use rand::Rng;
-use std::{f32::consts::{PI, FRAC_PI_2}, time::Duration};
-use super::{AppState, GameAssets};
+use std::{
+    f32::consts::{FRAC_PI_2, PI},
+    time::Duration,
+};
 
 const TWO_PI: f32 = 2.0 * PI;
 
@@ -37,7 +40,6 @@ pub enum ExplodableType {
 pub enum GameButtonAction {
     ReturnToMenu,
 }
-
 
 //
 // components
@@ -120,7 +122,6 @@ pub struct StarCore(pub Entity);
 #[derive(Component)]
 pub struct StarNode(pub Timer);
 
-
 //
 // events
 //
@@ -136,7 +137,6 @@ pub struct PlayerDeathEvent;
 
 #[derive(Event)]
 pub struct SetupLevel;
-
 
 //
 // systems
@@ -165,7 +165,7 @@ pub fn bullet_timer(
     mut commands: Commands,
     time: Res<Time>,
     mut q_bullets: Query<(Entity, &Transform, &mut Projectile)>,
-    q_camera: Query<&Transform, With<CameraOffset>>
+    q_camera: Query<&Transform, With<CameraOffset>>,
 ) {
     //
     // despawn bullets after a certain number of seconds,
@@ -175,9 +175,12 @@ pub fn bullet_timer(
     for cam_trans in q_camera.iter() {
         for (entity, trans, mut projectile) in q_bullets.iter_mut() {
             projectile.0.tick(time.delta());
-            
+
             // this isn't perfect since we're only looking in one direction but it's okay
-            let diff = trans.translation.truncate().distance(cam_trans.translation.truncate());
+            let diff = trans
+                .translation
+                .truncate()
+                .distance(cam_trans.translation.truncate());
             if diff > 750.0 || projectile.0.just_finished() {
                 commands.entity(entity).despawn();
             }
@@ -250,7 +253,7 @@ pub fn listen_explosion(
                         n_sprites: 3,
                         one_time: true,
                     },
-                    GameNode
+                    GameNode,
                 ));
             }
             ExplosionSize::Big => {
@@ -265,7 +268,7 @@ pub fn listen_explosion(
                         n_sprites: 3,
                         one_time: true,
                     },
-                    GameNode
+                    GameNode,
                 ));
             }
         }
@@ -333,8 +336,8 @@ pub fn move_enemy_ships(
 pub fn player_input(
     mut commands: Commands,
     kb: Res<Input<KeyCode>>,
-    mut player: Query<(&mut Transform, &mut Velocity, &mut CameraOffset), With<Player>>,
     game_assets: Res<GameAssets>,
+    mut player: Query<(&mut Transform, &mut Velocity, &mut CameraOffset), With<Player>>,
 ) {
     if let Ok((mut trans, mut vel, mut offset)) = player.get_single_mut() {
         if let Some(keycode) = kb.get_just_pressed().last() {
@@ -356,11 +359,7 @@ pub fn player_input(
                     vel.linvel = Vec2::new(400.0, 0.0);
                     rot = 3.0 * FRAC_PI_2;
                 }
-                
-                // optional backdoor for testing, make sure
-                // nothing is here when publishing
-                KeyCode::Numpad9 => {}
-                
+
                 KeyCode::Return => {
                     let texture1: Handle<Image>;
                     let texture2: Handle<Image>;

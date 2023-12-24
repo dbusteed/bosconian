@@ -22,16 +22,20 @@ use super::{
         star_node_shoot,
         update_minimap,
         world_to_minimap,
-        
-        // components
+
         Animation,
         CameraOffset,
         Collidable,
         Countdown,
         CountdownText,
         EnemyShip,
+        EnemyType,
         Explodable,
+        ExplodableType,
+        ExplosionEvent,
+        ExplosionSize,
         GameButton,
+        GameButtonAction,
         GameCamera,
         GameNode,
         IType,
@@ -40,19 +44,11 @@ use super::{
         MinimapPlayer,
         MinimapStar,
         Player,
+        PlayerDeathEvent,
+        PType,
+        SetupLevel,
         StarCore,
         StarNode,
-        
-        // enums
-        EnemyType,
-        ExplodableType,
-        ExplosionSize,
-        GameButtonAction,
-        
-        // events
-        ExplosionEvent,
-        PlayerDeathEvent,
-        SetupLevel,
     },
     AppState, GameAssets,
 };
@@ -471,78 +467,117 @@ fn countdown(
 
 fn spawn_ships_and_stars(
     mut commands: Commands,
+    game_start: Res<GameStartSeconds>,
     game_assets: Res<GameAssets>,
-    q_itype: Query<Entity, With<IType>>,
+    q_fighter: Query<Entity, With<EnemyShip>>,
     q_stars: Query<Entity, With<StarCore>>,
     q_cam_offest: Query<&CameraOffset>,
     mut q_spawn_timer: Query<&mut StarSpawnTimer>,
     time: Res<Time>,
 ) {
-    let mut count = 0;
-    for _ in q_itype.iter() {
-        count += 1;
+    let seconds = (time.elapsed_seconds() - game_start.0) as usize;
+    let max_fighters = ((seconds / 30) * 5) + 5;
+    let max_stars = ((seconds / 30) * 3) + 3;
+
+    let mut fighter_count = 0;
+    for _ in q_fighter.iter() {
+        fighter_count += 1;
     }
 
-    if count < 8 {
+    if fighter_count < max_fighters {
         if let Ok(offset) = q_cam_offest.get_single() {
             let mut rng = rand::thread_rng();
             let angle: f32 = rng.gen_range(-PI..PI);
             let trans = Vec3::new(angle.cos(), angle.sin(), 10.0)
-                * Vec3::new(650.0 * 1.25, 650.0 * 1.25, 1.0)
+                * Vec3::new(850.0 * 1.25, 850.0 * 1.25, 1.0)
                 + offset.0;
             let angle: f32 = rng.gen_range(-PI..PI);
 
-            commands.spawn((
-                SpriteBundle {
-                    texture: game_assets.i_type.clone(),
-                    transform: Transform {
-                        translation: trans,
-                        rotation: Quat::from_rotation_z(angle),
+            if rng.gen_bool(0.5) {
+                commands.spawn((
+                    SpriteBundle {
+                        texture: game_assets.p_type.clone(),
+                        transform: Transform {
+                            translation: trans,
+                            rotation: Quat::from_rotation_z(angle),
+                            ..default()
+                        },
                         ..default()
                     },
-                    ..default()
-                },
-                Velocity::default(),
-                RigidBody::Dynamic,
-                Collider::ball(26.0),
-                Sensor,
-                EnemyShip {
-                    eneny_type: EnemyType::IType,
-                    target: None,
-                    time_got_target: None,
-                    max_time_on_target: 0.25,
-                    speed: 300.0,
-                    turn_radius: 0.05
-                },
-                CollisionGroups::new(
-                    Group::from_bits_truncate(0b0000100),
-                    Group::from_bits_truncate(0b1100111),
-                ),
-                Explodable(ExplodableType::Figher),
-                IType,
-                RenderLayers::layer(0),
-                LevelNode,
-                GameNode,
-            ));
+                    Velocity::default(),
+                    RigidBody::Dynamic,
+                    Collider::ball(26.0),
+                    Sensor,
+                    EnemyShip {
+                        eneny_type: EnemyType::PType,
+                        target: None,
+                        time_got_target: None,
+                        max_time_on_target: 3.0,
+                        speed: 250.0,
+                        turn_radius: 0.02,
+                    },
+                    CollisionGroups::new(
+                        Group::from_bits_truncate(0b0000100),
+                        Group::from_bits_truncate(0b1100111),
+                    ),
+                    Explodable(ExplodableType::PType),
+                    PType,
+                    RenderLayers::layer(0),
+                    LevelNode,
+                    GameNode,
+                ));
+            } else {
+                commands.spawn((
+                    SpriteBundle {
+                        texture: game_assets.i_type.clone(),
+                        transform: Transform {
+                            translation: trans,
+                            rotation: Quat::from_rotation_z(angle),
+                            ..default()
+                        },
+                        ..default()
+                    },
+                    Velocity::default(),
+                    RigidBody::Dynamic,
+                    Collider::ball(26.0),
+                    Sensor,
+                    EnemyShip {
+                        eneny_type: EnemyType::IType,
+                        target: None,
+                        time_got_target: None,
+                        max_time_on_target: 0.25,
+                        speed: 300.0,
+                        turn_radius: 0.05,
+                    },
+                    CollisionGroups::new(
+                        Group::from_bits_truncate(0b0000100),
+                        Group::from_bits_truncate(0b1100111),
+                    ),
+                    Explodable(ExplodableType::Figher),
+                    IType,
+                    RenderLayers::layer(0),
+                    LevelNode,
+                    GameNode,
+                ));
+            }
         }
     }
 
     if let Ok(mut timer) = q_spawn_timer.get_single_mut() {
         timer.0.tick(time.delta());
         if timer.0.just_finished() {
-            let mut count = 0;
+            let mut star_count = 0;
             for _ in q_stars.iter() {
-                count += 1;
+                star_count += 1;
             }
 
             let mut rng = rand::thread_rng();
 
-            // spawning should be a timer, so there's a bit of break between
-            if count < 10 {
+            if star_count < max_stars {
                 // TODO avoid overlaps
                 // also maybe some buffer from the edge
-                let x = rng.gen_range(-2500.0..=2500.0) as f32;
-                let y = rng.gen_range(-2500.0..=2500.0) as f32;
+                let x = rng.gen_range(-2400.0..=2400.0) as f32;
+                let y = rng.gen_range(-2400.0..=2400.0) as f32;
                 let vert = rng.gen_bool(0.5);
 
                 let marker = commands
@@ -668,7 +703,7 @@ fn spawn_ships_and_stars(
                         }
                     });
             }
-            
+
             timer.0.set_duration(Duration::from_secs_f32(3.0));
         }
     }
@@ -735,7 +770,7 @@ fn check_collisions(
     mut explosion_events: EventWriter<ExplosionEvent>,
     mut player_death_events: EventWriter<PlayerDeathEvent>,
     q_stars: Query<(Entity, &StarCore)>,
-    mut q_star_timer: Query<&mut StarSpawnTimer>
+    mut q_star_timer: Query<&mut StarSpawnTimer>,
 ) {
     // maybe not the best, if player is gone, do we still want explo-explo actions?
     if let Ok((player, p_trans)) = q_player.get_single_mut() {
@@ -867,7 +902,6 @@ fn check_collisions(
     }
 }
 
-
 /*
     * member
     . filter
@@ -885,8 +919,12 @@ Collidable   *   .         .
 
 fighter dropping mines?
 
-minute  max_fighters  max_stars
-   0-1            10          5
-   1-2
+seconds  max_fighters  max_stars
+   0-30             5          3
+  30-60            10          6
+  60-90            15          9
+    etc
 
+  ((sec // 30) * 5) + 5
+  ((sec // 30) * 3) + 3
 */
