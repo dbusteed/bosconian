@@ -123,6 +123,7 @@ fn setup_game(
     mut game_state: ResMut<NextState<GameState>>,
     mut level_events: EventWriter<SetupLevel>,
 ) {
+    println!("SETUP GAME");
     rapier_config.gravity = Vec2::ZERO;
 
     // game camera
@@ -230,11 +231,14 @@ fn setup_game(
     // minimap player
     commands.spawn((
         ShapeBundle {
+            spatial: SpatialBundle {
+                transform: Transform::from_xyz(0.0, 0.0, 3.0),
+                ..default()
+            },
             path: GeometryBuilder::build_as(&shapes::Circle {
                 radius: 5f32,
                 center: Vec2::ZERO,
             }),
-            transform: Transform::from_xyz(0.0, 0.0, 3.0),
             ..default()
         },
         Fill::color(Color::WHITE),
@@ -583,14 +587,17 @@ fn spawn_ships_and_stars(
                 let marker = commands
                     .spawn((
                         ShapeBundle {
+                            spatial: SpatialBundle {
+                                transform: Transform {
+                                    translation: world_to_minimap(Vec3::new(x, y, 3.0)),
+                                    ..default()
+                                },
+                                ..default()
+                            },
                             path: GeometryBuilder::build_as(&shapes::Circle {
                                 radius: 7f32,
                                 center: Vec2::ZERO,
                             }),
-                            transform: Transform {
-                                translation: world_to_minimap(Vec3::new(x, y, 3.0)),
-                                ..default()
-                            },
                             ..default()
                         },
                         Fill::color(Color::hex("00bd00").unwrap()),

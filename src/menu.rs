@@ -36,6 +36,7 @@ fn setup_menu(
     game_assets: Res<GameAssets>,
     asset_server: Res<AssetServer>,
 ) {
+    println!("Setup Menu");
     commands.spawn((Camera2dBundle::default(), Menu));
 
     // background
@@ -46,6 +47,7 @@ fn setup_menu(
             ..default()
         },
         Menu,
+        Name::from("Menu Background"),
     ));
 
     // github button
@@ -198,6 +200,7 @@ fn button_system(
     mut game_state: ResMut<NextState<AppState>>,
     mut exit: EventWriter<AppExit>,
 ) {
+    // println!("Button System");
     for (interaction, button, mut color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
@@ -229,7 +232,9 @@ fn button_system(
 }
 
 fn despawn_menu(mut commands: Commands, menu: Query<Entity, With<Menu>>) {
+    println!("Byebye Menu");
     for ent in &menu {
+        println!("ent!");
         commands.entity(ent).despawn_recursive();
     }
 }

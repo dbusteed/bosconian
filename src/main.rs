@@ -82,7 +82,7 @@ fn main() {
             // RapierDebugRenderPlugin::default(),
             // bevy::diagnostic::LogDiagnosticsPlugin::default(),
             // bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
-            // bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
             menu::MenuPlugin,
             classic::ClassicPlugin,
             endless::EndlessPlugin,
