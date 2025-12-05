@@ -12,6 +12,7 @@ use super::{
     game::{
         animation, bullet_timer, button_system, destroy_game, follow_camera, listen_explosion,
         move_enemy_ships, player_input, star_node_shoot, update_minimap, world_to_minimap,
+        despawn_finished_sound_effects,
         Animation, CameraOffset, Collidable, Countdown, CountdownText, EnemyShip, EnemyType,
         Explodable, ExplodableType, ExplosionEvent, ExplosionSize, GameButton, GameButtonAction,
         GameCamera, GameNode, IType, LevelNode, MinimapCamera, MinimapPlayer, MinimapStar, PType,
@@ -64,7 +65,7 @@ struct Game {
 }
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
-enum GameState {
+enum ClassicGameState {
     #[default]
     None,
     Setup,
@@ -76,16 +77,16 @@ enum GameState {
 pub struct ClassicPlugin;
 impl Plugin for ClassicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<GameState>()
+        app.add_state::<ClassicGameState>()
             .add_event::<ExplosionEvent>()
             .add_event::<PlayerDeathEvent>()
             .add_event::<UpdateLivesEvent>()
             .add_event::<SetupLevel>()
             .add_systems(OnEnter(AppState::Classic), setup_game)
             .add_systems(OnExit(AppState::Classic), destroy_game)
-            .add_systems(OnEnter(GameState::GameOver), setup_gameover)
-            .add_systems(Update, button_system.run_if(in_state(GameState::GameOver)))
-            .add_systems(Update, countdown.run_if(in_state(GameState::Countdown)))
+            .add_systems(OnEnter(ClassicGameState::GameOver), setup_gameover)
+            .add_systems(Update, button_system.run_if(in_state(ClassicGameState::GameOver)))
+            .add_systems(Update, countdown.run_if(in_state(ClassicGameState::Countdown)))
             .add_systems(
                 Update,
                 (
@@ -98,20 +99,21 @@ impl Plugin for ClassicPlugin {
                     star_node_shoot,
                     star_update,
                     update_minimap,
+                    despawn_finished_sound_effects,
                 )
-                    .run_if(in_state(GameState::Play)),
+                    .run_if(in_state(ClassicGameState::Play)),
             )
             .add_systems(
                 Update,
                 (
                     animation,
                     listen_update_lives,
-                    listen_player_death,
+                    listen_player_death_classic,
                     listen_explosion,
                 )
-                    .run_if(not(in_state(GameState::None))),
+                    .run_if(not(in_state(ClassicGameState::None))),
             )
-            .add_systems(Update, setup_level.run_if(in_state(GameState::Setup)));
+            .add_systems(Update, setup_level.run_if(in_state(ClassicGameState::Setup)));
     }
 }
 
@@ -119,7 +121,7 @@ fn setup_game(
     mut commands: Commands,
     mut rapier_config: ResMut<RapierConfiguration>,
     game_assets: Res<GameAssets>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<ClassicGameState>>,
     mut level_events: EventWriter<SetupLevel>,
 ) {
     rapier_config.gravity = Vec2::ZERO;
@@ -127,6 +129,7 @@ fn setup_game(
     // game camera
     commands.spawn((
         Camera2dBundle {
+            transform: Transform::from_xyz(0.0, 0.0, 999.0),
             camera: Camera {
                 order: 0,
                 ..default()
@@ -280,7 +283,7 @@ fn setup_game(
     // Game resource
     commands.insert_resource(Game {
         level: 0,
-        lives: 4,
+        lives: 2, // DEBUG
         countdown: 3,
         setup: false,
         level_start_seconds: 0.0,
@@ -328,7 +331,7 @@ fn setup_game(
         GameNode,
     ));
 
-    game_state.set(GameState::Setup);
+    game_state.set(ClassicGameState::Setup);
     level_events.send(SetupLevel);
 }
 
@@ -411,11 +414,11 @@ fn setup_gameover(
 fn setup_level(
     mut level_event: EventReader<SetupLevel>,
     mut game: ResMut<Game>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<ClassicGameState>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
     mut q_mm_player: Query<&mut Transform, With<MinimapPlayer>>,
 ) {
-    for _ in level_event.iter() {
+    for _ in level_event.read() {
         game.level += 1;
         game.setup = true;
 
@@ -427,9 +430,9 @@ fn setup_level(
         }
 
         if game.level > levels::MAX_LEVEL {
-            game_state.set(GameState::GameOver);
+            game_state.set(ClassicGameState::GameOver);
         } else {
-            game_state.set(GameState::Countdown);
+            game_state.set(ClassicGameState::Countdown);
         }
     }
 }
@@ -440,7 +443,7 @@ fn countdown(
     levels: Res<Levels>,
     game_assets: Res<GameAssets>,
     mut game: ResMut<Game>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<ClassicGameState>>,
     mut life_events: EventWriter<UpdateLivesEvent>,
     q_countdown_text: Query<Entity, With<CountdownText>>,
     q_red_alert: Query<Entity, With<RedAlert>>,
@@ -504,7 +507,7 @@ fn countdown(
                 commands.spawn((
                     SpriteSheetBundle {
                         texture_atlas: game_assets.player.clone(),
-                        transform: Transform::from_xyz(0.0, 0.0, 9.0),
+                        transform: Transform::from_xyz(0.0, 0.0, 1.0),
                         ..default()
                     },
                     Animation {
@@ -737,7 +740,7 @@ fn countdown(
 
             if game.countdown == 0 {
                 game.level_start_seconds = time.elapsed_seconds();
-                game_state.set(GameState::Play);
+                game_state.set(ClassicGameState::Play);
                 q_player.get_single_mut().unwrap().linvel = Vec2::new(0.0, 400.0);
 
                 for ent in &q_countdown_text {
@@ -901,7 +904,7 @@ fn listen_update_lives(
     game: Res<Game>,
     q_lives: Query<Entity, With<Lives>>,
 ) {
-    for _ in events.iter() {
+    for _ in events.read() {
         for ent in q_lives.iter() {
             commands.entity(ent).despawn();
         }
@@ -928,14 +931,15 @@ fn listen_update_lives(
     }
 }
 
-fn listen_player_death(
+fn listen_player_death_classic(
     mut events: EventReader<PlayerDeathEvent>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<ClassicGameState>>,
     mut game: ResMut<Game>,
     mut q_mm_player: Query<&mut Transform, With<MinimapPlayer>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
 ) {
-    for _ in events.iter() {
+    for _ in events.read() {
+        println!("Event in listen_player_death_classic");
         game.lives -= 1;
 
         let mut cam = minimap.get_single_mut().unwrap();
@@ -946,9 +950,9 @@ fn listen_player_death(
 
         if game.lives > 0 {
             game.countdown = 4;
-            game_state.set(GameState::Countdown);
+            game_state.set(ClassicGameState::Countdown);
         } else {
-            game_state.set(GameState::GameOver);
+            game_state.set(ClassicGameState::GameOver);
         }
     }
 }
@@ -956,7 +960,7 @@ fn listen_player_death(
 fn star_update(
     mut commands: Commands,
     mut game: ResMut<Game>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<ClassicGameState>>,
     mut level_events: EventWriter<SetupLevel>,
     mut explosion_events: EventWriter<ExplosionEvent>,
     q_stars: Query<(Entity, &StarCore, &GlobalTransform, &Children)>,
@@ -990,7 +994,7 @@ fn star_update(
         }
 
         game.countdown = 4;
-        game_state.set(GameState::Setup);
+        game_state.set(ClassicGameState::Setup);
         level_events.send(SetupLevel);
     }
 }

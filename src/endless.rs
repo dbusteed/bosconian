@@ -69,7 +69,7 @@ struct Game {
 struct GameStartSeconds(f32);
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
-enum GameState {
+enum EndlessGameState {
     #[default]
     None,
     Setup,
@@ -81,16 +81,16 @@ enum GameState {
 pub struct EndlessPlugin;
 impl Plugin for EndlessPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<GameState>()
+        app.add_state::<EndlessGameState>()
             .add_event::<ExplosionEvent>()
             .add_event::<PlayerDeathEvent>()
             .add_event::<SetupLevel>()
             .insert_resource(GameStartSeconds(0.0))
             .add_systems(OnEnter(AppState::Endless), setup_game)
             .add_systems(OnExit(AppState::Endless), destroy_game)
-            .add_systems(OnEnter(GameState::GameOver), setup_gameover)
-            .add_systems(Update, button_system.run_if(in_state(GameState::GameOver)))
-            .add_systems(Update, countdown.run_if(in_state(GameState::Countdown)))
+            .add_systems(OnEnter(EndlessGameState::GameOver), setup_gameover)
+            .add_systems(Update, button_system.run_if(in_state(EndlessGameState::GameOver)))
+            .add_systems(Update, countdown.run_if(in_state(EndlessGameState::Countdown)))
             .add_systems(
                 Update,
                 (
@@ -105,14 +105,14 @@ impl Plugin for EndlessPlugin {
                     update_minimap,
                     update_score,
                 )
-                    .run_if(in_state(GameState::Play)),
+                    .run_if(in_state(EndlessGameState::Play)),
             )
             .add_systems(
                 Update,
-                (animation, listen_player_death, listen_explosion)
-                    .run_if(not(in_state(GameState::None))),
+                (animation, listen_player_death_endless, listen_explosion)
+                    .run_if(not(in_state(EndlessGameState::None))),
             )
-            .add_systems(Update, setup_level.run_if(in_state(GameState::Setup)));
+            .add_systems(Update, setup_level.run_if(in_state(EndlessGameState::Setup)));
     }
 }
 
@@ -120,15 +120,15 @@ fn setup_game(
     mut commands: Commands,
     mut rapier_config: ResMut<RapierConfiguration>,
     game_assets: Res<GameAssets>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<EndlessGameState>>,
     mut level_events: EventWriter<SetupLevel>,
 ) {
-    println!("SETUP GAME");
     rapier_config.gravity = Vec2::ZERO;
 
     // game camera
     commands.spawn((
         Camera2dBundle {
+            transform: Transform::from_xyz(0.0, 0.0, 999.0),
             camera: Camera {
                 order: 0,
                 ..default()
@@ -263,7 +263,7 @@ fn setup_game(
         GameNode,
     ));
 
-    game_state.set(GameState::Setup);
+    game_state.set(EndlessGameState::Setup);
     level_events.send(SetupLevel);
 }
 
@@ -273,7 +273,7 @@ fn setup_gameover(
     q_camera: Query<&mut Transform, With<GameCamera>>,
 ) {
     let camera = q_camera.get_single().unwrap();
-    let trans = camera.translation + Vec3::new(0.0, 100.0, -50.0);
+    let trans = camera.translation + Vec3::new(0.0, 100.0, 50.0);
     let texture = game_assets.game_over.clone();
 
     commands.spawn((
@@ -285,6 +285,7 @@ fn setup_gameover(
             },
             ..default()
         },
+        Name::from("Game Over Text"),
         GameNode,
     ));
 
@@ -341,11 +342,11 @@ fn setup_gameover(
 fn setup_level(
     mut level_event: EventReader<SetupLevel>,
     mut game: ResMut<Game>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<EndlessGameState>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
     mut q_mm_player: Query<&mut Transform, With<MinimapPlayer>>,
 ) {
-    for _ in level_event.iter() {
+    for _ in level_event.read() {
         game.setup = true;
 
         let mut cam = minimap.get_single_mut().unwrap();
@@ -355,7 +356,7 @@ fn setup_level(
             mm_trans.translation = world_to_minimap(Vec3::ZERO);
         }
 
-        game_state.set(GameState::Countdown);
+        game_state.set(EndlessGameState::Countdown);
     }
 }
 
@@ -379,7 +380,7 @@ fn countdown(
     mut q_player: Query<&mut Velocity, With<Player>>,
     q_countdown_text: Query<Entity, With<CountdownText>>,
     game_assets: Res<GameAssets>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<EndlessGameState>>,
     mut q_camera: Query<&mut Transform, With<GameCamera>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
     mut game_start: ResMut<GameStartSeconds>,
@@ -394,7 +395,7 @@ fn countdown(
                 commands.spawn((
                     SpriteSheetBundle {
                         texture_atlas: game_assets.player.clone(),
-                        transform: Transform::from_xyz(0.0, 0.0, 9.0),
+                        transform: Transform::from_xyz(0.0, 0.0, 1.0),
                         ..default()
                     },
                     Animation {
@@ -454,7 +455,7 @@ fn countdown(
 
             if game.countdown == 0 {
                 game_start.0 = time.elapsed_seconds();
-                game_state.set(GameState::Play);
+                game_state.set(EndlessGameState::Play);
                 q_player.get_single_mut().unwrap().linvel = Vec2::new(0.0, 400.0);
 
                 for ent in &q_countdown_text {
@@ -716,13 +717,14 @@ fn spawn_ships_and_stars(
     }
 }
 
-fn listen_player_death(
+fn listen_player_death_endless(
     mut events: EventReader<PlayerDeathEvent>,
-    mut game_state: ResMut<NextState<GameState>>,
+    mut game_state: ResMut<NextState<EndlessGameState>>,
     mut q_mm_player: Query<&mut Transform, With<MinimapPlayer>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
 ) {
-    for _ in events.iter() {
+    for _ in events.read() {
+        println!("Event in listen_player_death_endless");
         let mut cam = minimap.get_single_mut().unwrap();
         cam.is_active = false;
 
@@ -730,7 +732,7 @@ fn listen_player_death(
             mm_trans.translation = world_to_minimap(Vec3::ZERO);
         }
 
-        game_state.set(GameState::GameOver);
+        game_state.set(EndlessGameState::GameOver);
     }
 }
 

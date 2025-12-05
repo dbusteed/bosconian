@@ -1,6 +1,6 @@
 use super::{AppState, GameAssets};
 use bevy::{
-    audio::{Volume, VolumeLevel},
+    audio::{AudioSink, Volume, VolumeLevel},
     prelude::*,
 };
 use bevy_rapier2d::prelude::*;
@@ -114,6 +114,9 @@ pub struct Player;
 pub struct PlayerProjectile;
 
 #[derive(Component)]
+pub struct SoundEffect;
+
+#[derive(Component)]
 pub struct Projectile(pub Timer);
 
 #[derive(Component)]
@@ -217,10 +220,12 @@ pub fn button_system(
     }
 }
 
-pub fn destroy_game(mut commands: Commands, menu: Query<Entity, With<GameNode>>) {
+pub fn destroy_game(mut commands: Commands, menu: Query<Entity, With<GameNode>>, mut events: ResMut<Events<PlayerDeathEvent>>) {
     for ent in &menu {
         commands.entity(ent).despawn_recursive();
     }
+
+    events.clear();
 }
 
 pub fn follow_camera(
@@ -239,7 +244,7 @@ pub fn listen_explosion(
     mut events: EventReader<ExplosionEvent>,
     game_assets: Res<GameAssets>,
 ) {
-    for evt in events.iter() {
+    for evt in events.read() {
         match evt.size {
             ExplosionSize::Small => {
                 commands.spawn((
@@ -371,14 +376,18 @@ pub fn player_input(
                         texture2 = game_assets.v_laser.clone();
                     }
 
-                    commands.spawn(AudioBundle {
-                        source: game_assets.laser_sound.clone(),
-                        settings: PlaybackSettings {
-                            volume: Volume::Relative(VolumeLevel::new(0.25)),
+                    commands.spawn((
+                        AudioBundle {
+                            source: game_assets.laser_sound.clone(),
+                            settings: PlaybackSettings {
+                                volume: Volume::Relative(VolumeLevel::new(0.25)),
+                                ..default()
+                            },
                             ..default()
                         },
-                        ..default()
-                    });
+                        SoundEffect,
+                        GameNode,
+                    ));
 
                     commands.spawn((
                         SpriteBundle {
@@ -508,6 +517,17 @@ pub fn star_node_shoot(
                     }
                 }
             }
+        }
+    }
+}
+
+pub fn despawn_finished_sound_effects(
+    mut commands: Commands,
+    query: Query<(Entity, &AudioSink), With<SoundEffect>>,
+) {
+    for (entity, sink) in query.iter() {
+        if sink.empty() { // playback ended
+            commands.entity(entity).despawn();
         }
     }
 }

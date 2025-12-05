@@ -1,13 +1,17 @@
-use bevy::{prelude::*, audio::{Volume, VolumeLevel}};
 use bevy::window::{PresentMode, WindowResolution};
+use bevy::{
+    audio::{Volume, VolumeLevel},
+    prelude::*,
+};
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 mod classic;
 mod endless;
+mod game;
 mod levels;
 mod menu;
-mod game;
+mod debug;
 
 #[derive(Resource)]
 pub struct GameAssets {
@@ -57,6 +61,7 @@ pub enum AppState {
     Menu,
     Classic,
     Endless,
+    Debug,
 }
 
 fn main() {
@@ -86,6 +91,7 @@ fn main() {
             menu::MenuPlugin,
             classic::ClassicPlugin,
             endless::EndlessPlugin,
+            debug::DebugPlugin,
         ))
         .add_state::<AppState>()
         .add_systems(PreStartup, load_assets)
@@ -97,15 +103,18 @@ fn load_assets(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    commands.spawn(AudioBundle {
-        source: asset_server.load("sounds/Test.ogg"),
-        settings: PlaybackSettings {
-            mode: bevy::audio::PlaybackMode::Loop,
-            volume: Volume::Relative(VolumeLevel::new(0.25)),
+    commands.spawn((
+        AudioBundle {
+            source: asset_server.load("sounds/Test.ogg"),
+            settings: PlaybackSettings {
+                mode: bevy::audio::PlaybackMode::Loop,
+                volume: Volume::Relative(VolumeLevel::new(0.00)),
+                ..default()
+            },
             ..default()
         },
-        ..default()
-    });
+        Name::from("Background Music"),
+    ));
 
     let game_assets = GameAssets {
         life: asset_server.load("player_single.png"),

@@ -36,8 +36,11 @@ fn setup_menu(
     game_assets: Res<GameAssets>,
     asset_server: Res<AssetServer>,
 ) {
-    println!("Setup Menu");
-    commands.spawn((Camera2dBundle::default(), Menu));
+    commands.spawn((
+        Camera2dBundle::default(),
+        Menu,
+        Name::from("Menu Camera"),
+    ));
 
     // background
     commands.spawn((
@@ -71,6 +74,7 @@ fn setup_menu(
             hover_color: Color::rgb(1.0, 1.0, 1.0),
         },
         Menu,
+        Name::from("Menu GitHub"),
     ));
 
     // menu buttons
@@ -90,6 +94,7 @@ fn setup_menu(
                 ..default()
             },
             Menu,
+            Name::from("Menu Buttons"),
         ))
         .with_children(|parent| {
             parent
@@ -232,9 +237,7 @@ fn button_system(
 }
 
 fn despawn_menu(mut commands: Commands, menu: Query<Entity, With<Menu>>) {
-    println!("Byebye Menu");
     for ent in &menu {
-        println!("ent!");
         commands.entity(ent).despawn_recursive();
     }
 }
