@@ -227,8 +227,8 @@ fn setup_game(
             }),
             ..default()
         },
-        Fill::color(Color::rgba(0f32, 0f32, 0f32, 0f32)),
-        Stroke::new(Color::RED, 10.0),
+        Fill::color(Color::srgba(0f32, 0f32, 0f32, 0f32)),
+        Stroke::new(Color::srgb(1f32, 0f32, 0f32), 10.0),
         Collider::compound(vec![
             (Vec2::new(0., 2500.), 0f32, Collider::cuboid(2500., 2.5)),
             (Vec2::new(0., -2500.), 0f32, Collider::cuboid(2500., 2.5)),
@@ -398,13 +398,13 @@ fn setup_gameover(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        background_color: Color::GRAY.into(),
+                        background_color: Color::BLACK.into(),
                         ..default()
                     },
                     GameButton {
                         action: GameButtonAction::ReturnToMenu,
-                        idle_color: Color::rgb(0.15, 0.15, 0.15),
-                        hover_color: Color::rgb(0.25, 0.25, 0.25),
+                        idle_color: Color::srgb(0.15, 0.15, 0.15),
+                        hover_color: Color::srgb(0.25, 0.25, 0.25),
                     },
                 ))
                 .with_children(|parent| {
@@ -413,7 +413,7 @@ fn setup_gameover(
                         TextStyle {
                             font: game_assets.font.clone(),
                             font_size: 30.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
+                            color: Color::srgb(0.9, 0.9, 0.9),
                         },
                     ));
                 });
@@ -514,12 +514,12 @@ fn countdown(
                 }
 
                 commands.spawn((
-                    SpriteSheetBundle {
+                    SpriteBundle {
                         texture: game_assets.player.texture.clone(),
-                        atlas: TextureAtlas::from(game_assets.player.layout.clone()),
                         transform: Transform::from_xyz(0.0, 0.0, 1.0),
                         ..default()
                     },
+                    TextureAtlas::from(game_assets.player.layout.clone()),
                     Animation {
                         timer: Timer::from_seconds(0.35, TimerMode::Repeating),
                         n_sprites: 2,
@@ -565,7 +565,7 @@ fn countdown(
                                     }),
                                     ..default()
                                 },
-                                Fill::color(Color::hex("00bd00").unwrap()),
+                                Fill::color(Color::srgb(0f32, 0.741, 0f32)),
                                 MinimapStar,
                                 RenderLayers::layer(1),
                                 LevelNode,
@@ -647,19 +647,18 @@ fn countdown(
                                 for (pos, atlas) in star_config.1 {
                                     parent
                                         .spawn((
-                                            SpriteSheetBundle {
+                                            SpriteBundle {
                                                 texture: atlas.texture.clone(),
-                                                // atlas: TextureAtlas::from(atlas.layout.clone()),
-                                                atlas: TextureAtlas {
-                                                    layout: atlas.layout.clone(),
-                                                    index: 0,
-                                                },
                                                 transform: Transform {
                                                     translation: pos,
                                                     ..default()
                                                 },
                                                 ..default()
                                             },
+                                            TextureAtlas {
+                                                    layout: atlas.layout.clone(),
+                                                    index: 0,
+                                                },
                                             RigidBody::Fixed,
                                             Collider::ball(32.0),
                                             StarNode(Timer::from_seconds(
@@ -725,15 +724,15 @@ fn countdown(
                 }
 
                 commands.spawn((
-                    SpriteSheetBundle {
+                    SpriteBundle {
                         texture: game_assets.countdown.texture.clone(),
-                        atlas: TextureAtlas {
-                            layout: game_assets.countdown.layout.clone(),
-                            index: game.countdown - 1,
-                        },
                         transform: Transform::from_xyz(0.0, 0.0, 10.0),
                         ..default()
                     },
+                    TextureAtlas {
+                            layout: game_assets.countdown.layout.clone(),
+                            index: game.countdown - 1,
+                        },
                     CountdownText,
                     LevelNode,
                     GameNode,
@@ -784,12 +783,12 @@ fn spawn_enemy_ships(
             game.red_alert = true;
 
             commands.spawn((
-                SpriteSheetBundle {
+                SpriteBundle {
                     texture: game_assets.red_alert.texture.clone(),
-                    atlas: TextureAtlas::from(game_assets.red_alert.layout.clone()),
                     transform: Transform::from_xyz(0.0, (750.0 / 2.0) - 20.0, 10.0),
                     ..default()
                 },
+                TextureAtlas::from(game_assets.red_alert.layout.clone()),
                 Animation {
                     timer: Timer::from_seconds(0.5, TimerMode::Repeating),
                     n_sprites: 2,

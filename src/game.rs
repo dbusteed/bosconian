@@ -248,12 +248,12 @@ pub fn listen_explosion(
         match evt.size {
             ExplosionSize::Small => {
                 commands.spawn((
-                    SpriteSheetBundle {
+                    SpriteBundle {
                         texture: game_assets.explosion.texture.clone(),
-                        atlas: TextureAtlas::from(game_assets.explosion.layout.clone()),
                         transform: Transform::from_xyz(evt.x, evt.y, 3.0),
                         ..default()
                     },
+                    TextureAtlas::from(game_assets.explosion.layout.clone()),
                     Animation {
                         timer: Timer::from_seconds(0.15, TimerMode::Repeating),
                         n_sprites: 3,
@@ -264,12 +264,12 @@ pub fn listen_explosion(
             }
             ExplosionSize::Big => {
                 commands.spawn((
-                    SpriteSheetBundle {
+                    SpriteBundle {
                         texture: game_assets.big_explosion.texture.clone(),
-                        atlas: TextureAtlas::from(game_assets.big_explosion.layout.clone()),
                         transform: Transform::from_xyz(evt.x, evt.y, 3.0),
                         ..default()
                     },
+                    TextureAtlas::from(game_assets.big_explosion.layout.clone()),
                     Animation {
                         timer: Timer::from_seconds(0.15, TimerMode::Repeating),
                         n_sprites: 3,
@@ -485,9 +485,8 @@ pub fn star_node_shoot(
                             * 150.0;
 
                         commands.spawn((
-                            SpriteSheetBundle {
+                            SpriteBundle {
                                 texture: game_assets.star_node_laser.texture.clone(),
-                                atlas: TextureAtlas::from(game_assets.star_node_laser.layout.clone()),
                                 transform: Transform::from_xyz(
                                     trans.translation().x,
                                     trans.translation().y,
@@ -495,6 +494,7 @@ pub fn star_node_shoot(
                                 ),
                                 ..default()
                             },
+                            TextureAtlas::from(game_assets.star_node_laser.layout.clone()),
                             Animation {
                                 timer: Timer::from_seconds(0.08, TimerMode::Repeating),
                                 n_sprites: 4,

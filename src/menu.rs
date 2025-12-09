@@ -70,8 +70,8 @@ fn setup_menu(
         },
         MenuButton {
             action: MenuButtonAction::VisitRepo,
-            idle_color: Color::rgb(0.70, 0.70, 0.70),
-            hover_color: Color::rgb(1.0, 1.0, 1.0),
+            idle_color: Color::srgb(0.70, 0.70, 0.70),
+            hover_color: Color::srgb(1.0, 1.0, 1.0),
         },
         Menu,
         Name::from("Menu GitHub"),
@@ -107,13 +107,13 @@ fn setup_menu(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        background_color: Color::rgb(0.86, 0.88, 0.91).into(),
+                        background_color: Color::srgb(0.86, 0.88, 0.91).into(),
                         ..default()
                     },
                     MenuButton {
                         action: MenuButtonAction::Classic,
-                        idle_color: Color::rgb(0.86, 0.88, 0.91),
-                        hover_color: Color::rgb(0.58, 0.60, 0.69),
+                        idle_color: Color::srgb(0.86, 0.88, 0.91),
+                        hover_color: Color::srgb(0.58, 0.60, 0.69),
                     },
                 ))
                 .with_children(|parent| {
@@ -122,7 +122,7 @@ fn setup_menu(
                         TextStyle {
                             font: game_assets.font.clone(),
                             font_size: 30.0,
-                            color: Color::rgb(0.0, 0.0, 0.0),
+                            color: Color::srgb(0.0, 0.0, 0.0),
                         },
                     ));
                 });
@@ -137,13 +137,13 @@ fn setup_menu(
                             align_items: AlignItems::Center,
                             ..default()
                         },
-                        background_color: Color::rgb(0.86, 0.88, 0.91).into(),
+                        background_color: Color::srgb(0.86, 0.88, 0.91).into(),
                         ..default()
                     },
                     MenuButton {
                         action: MenuButtonAction::Endless,
-                        idle_color: Color::rgb(0.86, 0.88, 0.91),
-                        hover_color: Color::rgb(0.58, 0.60, 0.69),
+                        idle_color: Color::srgb(0.86, 0.88, 0.91),
+                        hover_color: Color::srgb(0.58, 0.60, 0.69),
                     },
                 ))
                 .with_children(|parent| {
@@ -152,7 +152,7 @@ fn setup_menu(
                         TextStyle {
                             font: game_assets.font.clone(),
                             font_size: 30.0,
-                            color: Color::rgb(0.0, 0.0, 0.0),
+                            color: Color::srgb(0.0, 0.0, 0.0),
                         },
                     ));
                 });
@@ -169,13 +169,13 @@ fn setup_menu(
                                 align_items: AlignItems::Center,
                                 ..default()
                             },
-                            background_color: Color::rgb(0.86, 0.88, 0.91).into(),
+                            background_color: Color::srgb(0.86, 0.88, 0.91).into(),
                             ..default()
                         },
                         MenuButton {
                             action: MenuButtonAction::Quit,
-                            idle_color: Color::rgb(0.86, 0.88, 0.91),
-                            hover_color: Color::rgb(0.58, 0.60, 0.69),
+                            idle_color: Color::srgb(0.86, 0.88, 0.91),
+                            hover_color: Color::srgb(0.58, 0.60, 0.69),
                         },
                     ))
                     .with_children(|parent| {
@@ -184,7 +184,7 @@ fn setup_menu(
                             TextStyle {
                                 font: game_assets.font.clone(),
                                 font_size: 30.0,
-                                color: Color::rgb(0.0, 0.0, 0.0),
+                                color: Color::srgb(0.0, 0.0, 0.0),
                             },
                         ));
                     });
@@ -214,7 +214,7 @@ fn button_system(
                     MenuButtonAction::Endless => game_state.set(AppState::Endless),
                     MenuButtonAction::Quit => {
                         // .send returns the eventID, suppress with ;
-                        exit.send(AppExit);
+                        exit.send(AppExit::Success);
                     }
                     MenuButtonAction::VisitRepo => {
                         match webbrowser::open(REPO_URL) {
