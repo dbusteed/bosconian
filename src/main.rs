@@ -1,8 +1,5 @@
 use bevy::window::{PresentMode, WindowResolution};
-use bevy::{
-    audio::{Volume, VolumeLevel},
-    prelude::*,
-};
+use bevy::{audio::Volume, prelude::*};
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
 
@@ -11,7 +8,12 @@ mod endless;
 mod game;
 mod levels;
 mod menu;
-mod debug;
+
+#[derive(Asset, TypePath, Clone)]
+pub struct Atlas {
+    pub texture: Handle<Image>,
+    pub layout: Handle<TextureAtlasLayout>,
+}
 
 #[derive(Resource)]
 pub struct GameAssets {
@@ -19,8 +21,8 @@ pub struct GameAssets {
     font: Handle<Font>,
     background: Handle<Image>,
     menu_background: Handle<Image>,
-    countdown: Handle<TextureAtlas>,
-    red_alert: Handle<TextureAtlas>,
+    countdown: Atlas,
+    red_alert: Atlas,
     life: Handle<Image>,
     game_over: Handle<Image>,
     you_won: Handle<Image>,
@@ -29,30 +31,30 @@ pub struct GameAssets {
     laser_sound: Handle<AudioSource>,
 
     // game
-    player: Handle<TextureAtlas>,
+    player: Atlas,
     i_type: Handle<Image>,
     p_type: Handle<Image>,
     v_laser: Handle<Image>,
     h_laser: Handle<Image>,
-    explosion: Handle<TextureAtlas>,
-    big_explosion: Handle<TextureAtlas>,
-    star_node_laser: Handle<TextureAtlas>,
+    explosion: Atlas,
+    big_explosion: Atlas,
+    star_node_laser: Atlas,
     v_star: Handle<Image>,
     h_star: Handle<Image>,
     mine: Handle<Image>,
     asteroid: Handle<Image>,
-    star_node_v1: Handle<TextureAtlas>,
-    star_node_v2: Handle<TextureAtlas>,
-    star_node_v3: Handle<TextureAtlas>,
-    star_node_v4: Handle<TextureAtlas>,
-    star_node_v5: Handle<TextureAtlas>,
-    star_node_v6: Handle<TextureAtlas>,
-    star_node_h1: Handle<TextureAtlas>,
-    star_node_h2: Handle<TextureAtlas>,
-    star_node_h3: Handle<TextureAtlas>,
-    star_node_h4: Handle<TextureAtlas>,
-    star_node_h5: Handle<TextureAtlas>,
-    star_node_h6: Handle<TextureAtlas>,
+    star_node_v1: Atlas,
+    star_node_v2: Atlas,
+    star_node_v3: Atlas,
+    star_node_v4: Atlas,
+    star_node_v5: Atlas,
+    star_node_v6: Atlas,
+    star_node_h1: Atlas,
+    star_node_h2: Atlas,
+    star_node_h3: Atlas,
+    star_node_h4: Atlas,
+    star_node_h5: Atlas,
+    star_node_h6: Atlas,
 }
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
@@ -61,7 +63,6 @@ pub enum AppState {
     Menu,
     Classic,
     Endless,
-    Debug,
 }
 
 fn main() {
@@ -87,13 +88,12 @@ fn main() {
             // RapierDebugRenderPlugin::default(),
             // bevy::diagnostic::LogDiagnosticsPlugin::default(),
             // bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
-            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+            // bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
             menu::MenuPlugin,
             classic::ClassicPlugin,
             endless::EndlessPlugin,
-            debug::DebugPlugin,
         ))
-        .add_state::<AppState>()
+        .insert_state(AppState::Menu)
         .add_systems(PreStartup, load_assets)
         .run();
 }
@@ -101,14 +101,14 @@ fn main() {
 fn load_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
     commands.spawn((
         AudioBundle {
             source: asset_server.load("sounds/Test.ogg"),
             settings: PlaybackSettings {
                 mode: bevy::audio::PlaybackMode::Loop,
-                volume: Volume::Relative(VolumeLevel::new(0.00)),
+                volume: Volume::new(0.25),
                 ..default()
             },
             ..default()
@@ -132,150 +132,186 @@ fn load_assets(
         h_star: asset_server.load("h_star.png"),
         mine: asset_server.load("mine.png"),
         asteroid: asset_server.load("asteroid.png"),
-        player: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("player.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        countdown: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("countdown.png"),
-            Vec2::new(256.0, 256.0),
-            3,
-            1,
-            None,
-            None,
-        )),
-        red_alert: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("red_alert.png"),
-            Vec2::new(268.0, 32.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        explosion: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("explosion.png"),
-            Vec2::new(64.0, 64.0),
-            3,
-            1,
-            None,
-            None,
-        )),
-        big_explosion: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("big_explosion.png"),
-            Vec2::new(256.0, 256.0),
-            3,
-            1,
-            None,
-            None,
-        )),
-        star_node_laser: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_laser.png"),
-            Vec2::new(16.0, 16.0),
-            4,
-            1,
-            None,
-            None,
-        )),
-        star_node_v1: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_v1.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_v2: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_v2.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_v3: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_v3.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_v4: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_v4.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_v5: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_v5.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_v6: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_v6.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_h1: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_h1.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_h2: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_h2.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_h3: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_h3.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_h4: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_h4.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_h5: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_h5.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
-        star_node_h6: texture_atlases.add(TextureAtlas::from_grid(
-            asset_server.load("star_node_h6.png"),
-            Vec2::new(64.0, 64.0),
-            2,
-            1,
-            None,
-            None,
-        )),
+        player: Atlas {
+            texture: asset_server.load("player.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        countdown: Atlas {
+            texture: asset_server.load("countdown.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(256.0, 256.0),
+                3,
+                1,
+                None,
+                None,
+            )),
+        },
+        red_alert: Atlas {
+            texture: asset_server.load("red_alert.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(268.0, 32.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        explosion: Atlas {
+            texture: asset_server.load("explosion.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                3,
+                1,
+                None,
+                None,
+            )),
+        },
+        big_explosion: Atlas {
+            texture: asset_server.load("big_explosion.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(256.0, 256.0),
+                3,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_laser: Atlas {
+            texture: asset_server.load("star_node_laser.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(16.0, 16.0),
+                4,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_v1: Atlas {
+            texture: asset_server.load("star_node_v1.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_v2: Atlas {
+            texture: asset_server.load("star_node_v2.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_v3: Atlas {
+            texture: asset_server.load("star_node_v3.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_v4: Atlas {
+            texture: asset_server.load("star_node_v4.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_v5: Atlas {
+            texture: asset_server.load("star_node_v5.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_v6: Atlas {
+            texture: asset_server.load("star_node_v6.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_h1: Atlas {
+            texture: asset_server.load("star_node_h1.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_h2: Atlas {
+            texture: asset_server.load("star_node_h2.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_h3: Atlas {
+            texture: asset_server.load("star_node_h3.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_h4: Atlas {
+            texture: asset_server.load("star_node_h4.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_h5: Atlas {
+            texture: asset_server.load("star_node_h5.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
+        star_node_h6: Atlas {
+            texture: asset_server.load("star_node_h6.png"),
+            layout: layouts.add(TextureAtlasLayout::from_grid(
+                Vec2::new(64.0, 64.0),
+                2,
+                1,
+                None,
+                None,
+            )),
+        },
     };
 
     commands.insert_resource(game_assets);

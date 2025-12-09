@@ -212,7 +212,10 @@ fn button_system(
                 match button.action {
                     MenuButtonAction::Classic => game_state.set(AppState::Classic),
                     MenuButtonAction::Endless => game_state.set(AppState::Endless),
-                    MenuButtonAction::Quit => exit.send(AppExit),
+                    MenuButtonAction::Quit => {
+                        // .send returns the eventID, suppress with ;
+                        exit.send(AppExit);
+                    }
                     MenuButtonAction::VisitRepo => {
                         match webbrowser::open(REPO_URL) {
                             Ok(()) => { /* do nothing, if matched, the command was executed */ }

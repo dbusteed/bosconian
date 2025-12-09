@@ -1,5 +1,4 @@
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };
@@ -50,7 +49,7 @@ use super::{
         StarCore,
         StarNode,
     },
-    AppState, GameAssets,
+    AppState, GameAssets, Atlas
 };
 
 #[derive(Component)]
@@ -81,7 +80,7 @@ enum EndlessGameState {
 pub struct EndlessPlugin;
 impl Plugin for EndlessPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<EndlessGameState>()
+        app.insert_state(EndlessGameState::None)
             .add_event::<ExplosionEvent>()
             .add_event::<PlayerDeathEvent>()
             .add_event::<SetupLevel>()
@@ -133,16 +132,16 @@ fn setup_game(
                 order: 0,
                 ..default()
             },
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::None,
-            },
+            // camera_2d: Camera2d {
+            //     clear_color: ClearColorConfig::None,
+            // },
             projection: OrthographicProjection {
                 scale: 1.25,
                 ..default()
             },
             ..default()
         },
-        UiCameraConfig { show_ui: true },
+        // UiCameraConfig { show_ui: true },
         GameCamera,
         RenderLayers::from_layers(&[0]),
         GameNode,
@@ -160,12 +159,12 @@ fn setup_game(
                 }),
                 ..default()
             },
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::None,
-            },
+            // camera_2d: Camera2d {
+            //     clear_color: ClearColorConfig::None,
+            // },
             ..default()
         },
-        UiCameraConfig { show_ui: false },
+        // UiCameraConfig { show_ui: false },
         MinimapCamera,
         RenderLayers::from_layers(&[1]),
         GameNode,
@@ -388,13 +387,18 @@ fn countdown(
     if let Ok(mut countdown) = q_countdown.get_single_mut() {
         countdown.0.tick(time.delta());
         if countdown.0.just_finished() {
+            println!("{:?}", game.countdown);
             if game.countdown == 3 {
                 minimap.get_single_mut().unwrap().is_active = true;
 
                 // make player
                 commands.spawn((
                     SpriteSheetBundle {
-                        texture_atlas: game_assets.player.clone(),
+                        texture: game_assets.player.texture.clone(),
+                        atlas: TextureAtlas {
+                            layout: game_assets.player.layout.clone(),
+                            index: 0
+                        },
                         transform: Transform::from_xyz(0.0, 0.0, 1.0),
                         ..default()
                     },
@@ -439,12 +443,12 @@ fn countdown(
 
                 commands.spawn((
                     SpriteSheetBundle {
-                        texture_atlas: game_assets.countdown.clone(),
-                        transform: Transform::from_xyz(0.0, 0.0, 10.0),
-                        sprite: TextureAtlasSprite {
+                        texture: game_assets.countdown.texture.clone(),
+                        atlas: TextureAtlas {
+                            layout: game_assets.countdown.layout.clone(),
                             index: game.countdown - 1,
-                            ..default()
                         },
+                        transform: Transform::from_xyz(0.0, 0.0, 10.0),
                         ..default()
                     },
                     CountdownText,
@@ -609,7 +613,7 @@ fn spawn_ships_and_stars(
                     ))
                     .id();
 
-                let star_config: (Handle<Image>, [(Vec3, Handle<TextureAtlas>); 6]) = if vert {
+                let star_config: (Handle<Image>, [(Vec3, Atlas); 6]) = if vert {
                     (
                         game_assets.v_star.clone(),
                         [
@@ -680,11 +684,12 @@ fn spawn_ships_and_stars(
                         Name::from("STAR"),
                     ))
                     .with_children(|parent| {
-                        for (pos, texture) in star_config.1 {
+                        for (pos, atlas) in star_config.1 {
                             parent
                                 .spawn((
                                     SpriteSheetBundle {
-                                        texture_atlas: texture,
+                                        texture: atlas.texture,
+                                        atlas: TextureAtlas::from(atlas.layout),
                                         transform: Transform {
                                             translation: pos,
                                             ..default()
@@ -780,6 +785,8 @@ fn check_collisions(
     mut player_death_events: EventWriter<PlayerDeathEvent>,
     q_stars: Query<(Entity, &StarCore)>,
     mut q_star_timer: Query<&mut StarSpawnTimer>,
+    mut q_star_node_textures: Query<&mut TextureAtlas, With<StarNode>>,
+
 ) {
     // maybe not the best, if player is gone, do we still want explo-explo actions?
     if let Ok((player, p_trans)) = q_player.get_single_mut() {
@@ -797,12 +804,11 @@ fn check_collisions(
                     for (ent, trans, exp) in [(e_ent, e_trans, explo), (e_ent2, e_trans2, explo2)] {
                         match exp.0 {
                             ExplodableType::StarNode => {
+                                                                if let Ok(mut atlas) = q_star_node_textures.get_mut(e_ent) {
+                                    atlas.index = 1;
+                                }
                                 commands
                                     .entity(ent)
-                                    .insert(TextureAtlasSprite {
-                                        index: 1,
-                                        ..default()
-                                    })
                                     .insert(CollisionGroups::new(
                                         Group::from_bits_truncate(0b10000000),
                                         Group::from_bits_truncate(0b00100001),
@@ -858,10 +864,9 @@ fn check_collisions(
             if rapier_context.intersection_pair(e_ent, player) == Some(true) {
                 match explo.0 {
                     ExplodableType::StarNode => {
-                        commands.entity(e_ent).insert(TextureAtlasSprite {
-                            index: 1,
-                            ..default()
-                        });
+                        if let Ok(mut atlas) = q_star_node_textures.get_mut(e_ent) {
+                            atlas.index = 1;
+                        }
                     }
                     _ => commands.entity(e_ent).despawn(),
                 }

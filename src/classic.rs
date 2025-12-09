@@ -1,5 +1,5 @@
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
+    // core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };
@@ -10,15 +10,15 @@ use std::{f32::consts::PI, time::Duration};
 
 use super::{
     game::{
-        animation, bullet_timer, button_system, destroy_game, follow_camera, listen_explosion,
-        move_enemy_ships, player_input, star_node_shoot, update_minimap, world_to_minimap,
-        despawn_finished_sound_effects,
-        Animation, CameraOffset, Collidable, Countdown, CountdownText, EnemyShip, EnemyType,
-        Explodable, ExplodableType, ExplosionEvent, ExplosionSize, GameButton, GameButtonAction,
-        GameCamera, GameNode, IType, LevelNode, MinimapCamera, MinimapPlayer, MinimapStar, PType,
-        Player, PlayerDeathEvent, SetupLevel, StarCore, StarNode,
+        animation, bullet_timer, button_system, despawn_finished_sound_effects, destroy_game,
+        follow_camera, listen_explosion, move_enemy_ships, player_input, star_node_shoot,
+        update_minimap, world_to_minimap, Animation, CameraOffset, Collidable, Countdown,
+        CountdownText, EnemyShip, EnemyType, Explodable, ExplodableType, ExplosionEvent,
+        ExplosionSize, GameButton, GameButtonAction, GameCamera, GameNode, IType, LevelNode,
+        MinimapCamera, MinimapPlayer, MinimapStar, PType, Player, PlayerDeathEvent, SetupLevel,
+        StarCore, StarNode,
     },
-    levels, AppState, GameAssets,
+    levels, AppState, Atlas, GameAssets,
 };
 
 struct Level {
@@ -77,7 +77,7 @@ enum ClassicGameState {
 pub struct ClassicPlugin;
 impl Plugin for ClassicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<ClassicGameState>()
+        app.insert_state(ClassicGameState::None)
             .add_event::<ExplosionEvent>()
             .add_event::<PlayerDeathEvent>()
             .add_event::<UpdateLivesEvent>()
@@ -85,8 +85,14 @@ impl Plugin for ClassicPlugin {
             .add_systems(OnEnter(AppState::Classic), setup_game)
             .add_systems(OnExit(AppState::Classic), destroy_game)
             .add_systems(OnEnter(ClassicGameState::GameOver), setup_gameover)
-            .add_systems(Update, button_system.run_if(in_state(ClassicGameState::GameOver)))
-            .add_systems(Update, countdown.run_if(in_state(ClassicGameState::Countdown)))
+            .add_systems(
+                Update,
+                button_system.run_if(in_state(ClassicGameState::GameOver)),
+            )
+            .add_systems(
+                Update,
+                countdown.run_if(in_state(ClassicGameState::Countdown)),
+            )
             .add_systems(
                 Update,
                 (
@@ -113,7 +119,10 @@ impl Plugin for ClassicPlugin {
                 )
                     .run_if(not(in_state(ClassicGameState::None))),
             )
-            .add_systems(Update, setup_level.run_if(in_state(ClassicGameState::Setup)));
+            .add_systems(
+                Update,
+                setup_level.run_if(in_state(ClassicGameState::Setup)),
+            );
     }
 }
 
@@ -134,16 +143,16 @@ fn setup_game(
                 order: 0,
                 ..default()
             },
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::None,
-            },
+            // camera_2d: Camera2d {
+            //     clear_color: ClearColorConfig::None,
+            // },
             projection: OrthographicProjection {
                 scale: 1.25,
                 ..default()
             },
             ..default()
         },
-        UiCameraConfig { show_ui: true },
+        // UiCameraConfig { show_ui: true },
         GameCamera,
         RenderLayers::from_layers(&[0]),
         GameNode,
@@ -161,12 +170,12 @@ fn setup_game(
                 }),
                 ..default()
             },
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::None,
-            },
+            // camera_2d: Camera2d {
+            //     clear_color: ClearColorConfig::None,
+            // },
             ..default()
         },
-        UiCameraConfig { show_ui: false },
+        // UiCameraConfig { show_ui: false },
         MinimapCamera,
         RenderLayers::from_layers(&[1]),
         GameNode,
@@ -184,12 +193,12 @@ fn setup_game(
                 // }),
                 ..default()
             },
-            camera_2d: Camera2d {
-                clear_color: ClearColorConfig::None,
-            },
+            // camera_2d: Camera2d {
+            //     clear_color: ClearColorConfig::None,
+            // },
             ..default()
         },
-        UiCameraConfig { show_ui: false },
+        // UiCameraConfig { show_ui: false },
         RenderLayers::from_layers(&[2]),
         GameNode,
     ));
@@ -506,7 +515,8 @@ fn countdown(
 
                 commands.spawn((
                     SpriteSheetBundle {
-                        texture_atlas: game_assets.player.clone(),
+                        texture: game_assets.player.texture.clone(),
+                        atlas: TextureAtlas::from(game_assets.player.layout.clone()),
                         transform: Transform::from_xyz(0.0, 0.0, 1.0),
                         ..default()
                     },
@@ -563,68 +573,55 @@ fn countdown(
                             ))
                             .id();
 
-                        let star_config: (Handle<Image>, [(Vec3, Handle<TextureAtlas>); 6]) =
-                            if star.vert {
-                                (
-                                    game_assets.v_star.clone(),
-                                    [
-                                        (
-                                            Vec3::new(48.0, 96.0, 1.0),
-                                            game_assets.star_node_v1.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(112.0, 0.0, 1.0),
-                                            game_assets.star_node_v2.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(48.0, -96.0, 1.0),
-                                            game_assets.star_node_v3.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(-48.0, -96.0, 1.0),
-                                            game_assets.star_node_v4.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(-112.0, 0.0, 1.0),
-                                            game_assets.star_node_v5.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(-48.0, 96.0, 1.0),
-                                            game_assets.star_node_v6.clone(),
-                                        ),
-                                    ],
-                                )
-                            } else {
-                                (
-                                    game_assets.h_star.clone(),
-                                    [
-                                        (
-                                            Vec3::new(96.0, -48.0, 1.0),
-                                            game_assets.star_node_h1.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(0.0, -112.0, 1.0),
-                                            game_assets.star_node_h2.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(-96.0, -48.0, 1.0),
-                                            game_assets.star_node_h3.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(-96.0, 48.0, 1.0),
-                                            game_assets.star_node_h4.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(0.0, 112.0, 1.0),
-                                            game_assets.star_node_h5.clone(),
-                                        ),
-                                        (
-                                            Vec3::new(96.0, 48.0, 1.0),
-                                            game_assets.star_node_h6.clone(),
-                                        ),
-                                    ],
-                                )
-                            };
+                        let star_config: (Handle<Image>, [(Vec3, Atlas); 6]) = if star.vert {
+                            (
+                                game_assets.v_star.clone(),
+                                [
+                                    (Vec3::new(48.0, 96.0, 1.0), game_assets.star_node_v1.clone()),
+                                    (Vec3::new(112.0, 0.0, 1.0), game_assets.star_node_v2.clone()),
+                                    (
+                                        Vec3::new(48.0, -96.0, 1.0),
+                                        game_assets.star_node_v3.clone(),
+                                    ),
+                                    (
+                                        Vec3::new(-48.0, -96.0, 1.0),
+                                        game_assets.star_node_v4.clone(),
+                                    ),
+                                    (
+                                        Vec3::new(-112.0, 0.0, 1.0),
+                                        game_assets.star_node_v5.clone(),
+                                    ),
+                                    (
+                                        Vec3::new(-48.0, 96.0, 1.0),
+                                        game_assets.star_node_v6.clone(),
+                                    ),
+                                ],
+                            )
+                        } else {
+                            (
+                                game_assets.h_star.clone(),
+                                [
+                                    (
+                                        Vec3::new(96.0, -48.0, 1.0),
+                                        game_assets.star_node_h1.clone(),
+                                    ),
+                                    (
+                                        Vec3::new(0.0, -112.0, 1.0),
+                                        game_assets.star_node_h2.clone(),
+                                    ),
+                                    (
+                                        Vec3::new(-96.0, -48.0, 1.0),
+                                        game_assets.star_node_h3.clone(),
+                                    ),
+                                    (
+                                        Vec3::new(-96.0, 48.0, 1.0),
+                                        game_assets.star_node_h4.clone(),
+                                    ),
+                                    (Vec3::new(0.0, 112.0, 1.0), game_assets.star_node_h5.clone()),
+                                    (Vec3::new(96.0, 48.0, 1.0), game_assets.star_node_h6.clone()),
+                                ],
+                            )
+                        };
 
                         commands
                             .spawn((
@@ -647,11 +644,16 @@ fn countdown(
                                 Name::from("STAR"),
                             ))
                             .with_children(|parent| {
-                                for (pos, texture) in star_config.1 {
+                                for (pos, atlas) in star_config.1 {
                                     parent
                                         .spawn((
                                             SpriteSheetBundle {
-                                                texture_atlas: texture,
+                                                texture: atlas.texture.clone(),
+                                                // atlas: TextureAtlas::from(atlas.layout.clone()),
+                                                atlas: TextureAtlas {
+                                                    layout: atlas.layout.clone(),
+                                                    index: 0,
+                                                },
                                                 transform: Transform {
                                                     translation: pos,
                                                     ..default()
@@ -724,12 +726,12 @@ fn countdown(
 
                 commands.spawn((
                     SpriteSheetBundle {
-                        texture_atlas: game_assets.countdown.clone(),
-                        transform: Transform::from_xyz(0.0, 0.0, 10.0),
-                        sprite: TextureAtlasSprite {
+                        texture: game_assets.countdown.texture.clone(),
+                        atlas: TextureAtlas {
+                            layout: game_assets.countdown.layout.clone(),
                             index: game.countdown - 1,
-                            ..default()
                         },
+                        transform: Transform::from_xyz(0.0, 0.0, 10.0),
                         ..default()
                     },
                     CountdownText,
@@ -783,7 +785,8 @@ fn spawn_enemy_ships(
 
             commands.spawn((
                 SpriteSheetBundle {
-                    texture_atlas: game_assets.red_alert.clone(),
+                    texture: game_assets.red_alert.texture.clone(),
+                    atlas: TextureAtlas::from(game_assets.red_alert.layout.clone()),
                     transform: Transform::from_xyz(0.0, (750.0 / 2.0) - 20.0, 10.0),
                     ..default()
                 },
@@ -1009,6 +1012,7 @@ fn check_collisions(
     mut explosion_events: EventWriter<ExplosionEvent>,
     mut player_death_events: EventWriter<PlayerDeathEvent>,
     q_stars: Query<(Entity, &StarCore)>,
+    mut q_star_node_textures: Query<&mut TextureAtlas, With<StarNode>>,
 ) {
     // maybe not the best, if player is gone, do we still want explo-explo actions?
     if let Ok((player, p_trans)) = q_player.get_single_mut() {
@@ -1026,12 +1030,14 @@ fn check_collisions(
                     for (ent, trans, exp) in [(e_ent, e_trans, explo), (e_ent2, e_trans2, explo2)] {
                         match exp.0 {
                             ExplodableType::StarNode => {
+                                if let Ok(mut atlas) = q_star_node_textures.get_mut(e_ent) {
+                                    atlas.index = 1;
+                                }
+
+                                // TODO need to match and update the collision groups (insert no work)
+                                
                                 commands
                                     .entity(ent)
-                                    .insert(TextureAtlasSprite {
-                                        index: 1,
-                                        ..default()
-                                    })
                                     .insert(CollisionGroups::new(
                                         Group::from_bits_truncate(0b10000000),
                                         Group::from_bits_truncate(0b00100001),
@@ -1100,10 +1106,9 @@ fn check_collisions(
             if rapier_context.intersection_pair(e_ent, player) == Some(true) {
                 match explo.0 {
                     ExplodableType::StarNode => {
-                        commands.entity(e_ent).insert(TextureAtlasSprite {
-                            index: 1,
-                            ..default()
-                        });
+                        if let Ok(mut atlas) = q_star_node_textures.get_mut(e_ent) {
+                            atlas.index = 1;
+                        }
                     }
                     _ => commands.entity(e_ent).despawn(),
                 }

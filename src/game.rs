@@ -1,6 +1,6 @@
 use super::{AppState, GameAssets};
 use bevy::{
-    audio::{AudioSink, Volume, VolumeLevel},
+    audio::{AudioSink, Volume},
     prelude::*,
 };
 use bevy_rapier2d::prelude::*;
@@ -147,7 +147,7 @@ pub struct SetupLevel;
 pub fn animation(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Animation, &mut TextureAtlasSprite)>,
+    mut query: Query<(Entity, &mut Animation, &mut TextureAtlas)>,
 ) {
     for (entity, mut anim, mut sprite) in &mut query {
         anim.timer.tick(time.delta());
@@ -249,7 +249,8 @@ pub fn listen_explosion(
             ExplosionSize::Small => {
                 commands.spawn((
                     SpriteSheetBundle {
-                        texture_atlas: game_assets.explosion.clone(),
+                        texture: game_assets.explosion.texture.clone(),
+                        atlas: TextureAtlas::from(game_assets.explosion.layout.clone()),
                         transform: Transform::from_xyz(evt.x, evt.y, 3.0),
                         ..default()
                     },
@@ -264,7 +265,8 @@ pub fn listen_explosion(
             ExplosionSize::Big => {
                 commands.spawn((
                     SpriteSheetBundle {
-                        texture_atlas: game_assets.big_explosion.clone(),
+                        texture: game_assets.big_explosion.texture.clone(),
+                        atlas: TextureAtlas::from(game_assets.big_explosion.layout.clone()),
                         transform: Transform::from_xyz(evt.x, evt.y, 3.0),
                         ..default()
                     },
@@ -340,7 +342,7 @@ pub fn move_enemy_ships(
 
 pub fn player_input(
     mut commands: Commands,
-    kb: Res<Input<KeyCode>>,
+    kb: Res<ButtonInput<KeyCode>>,
     game_assets: Res<GameAssets>,
     mut player: Query<(&mut Transform, &mut Velocity, &mut CameraOffset), With<Player>>,
 ) {
@@ -348,24 +350,24 @@ pub fn player_input(
         if let Some(keycode) = kb.get_just_pressed().last() {
             let mut rot: f32 = -1.0;
             match keycode {
-                KeyCode::W => {
+                KeyCode::KeyW => {
                     vel.linvel = Vec2::new(0.0, 400.0);
                     rot = 0.0;
                 }
-                KeyCode::A => {
+                KeyCode::KeyA => {
                     vel.linvel = Vec2::new(-400.0, 0.0);
                     rot = FRAC_PI_2;
                 }
-                KeyCode::S => {
+                KeyCode::KeyS => {
                     vel.linvel = Vec2::new(0.0, -400.0);
                     rot = PI;
                 }
-                KeyCode::D => {
+                KeyCode::KeyD => {
                     vel.linvel = Vec2::new(400.0, 0.0);
                     rot = 3.0 * FRAC_PI_2;
                 }
 
-                KeyCode::Return => {
+                KeyCode::Enter => {
                     let texture1: Handle<Image>;
                     let texture2: Handle<Image>;
                     if vel.linvel.abs().x > 0f32 {
@@ -380,7 +382,7 @@ pub fn player_input(
                         AudioBundle {
                             source: game_assets.laser_sound.clone(),
                             settings: PlaybackSettings {
-                                volume: Volume::Relative(VolumeLevel::new(0.25)),
+                                volume: Volume::new(0.25),
                                 ..default()
                             },
                             ..default()
@@ -484,7 +486,8 @@ pub fn star_node_shoot(
 
                         commands.spawn((
                             SpriteSheetBundle {
-                                texture_atlas: game_assets.star_node_laser.clone(),
+                                texture: game_assets.star_node_laser.texture.clone(),
+                                atlas: TextureAtlas::from(game_assets.star_node_laser.layout.clone()),
                                 transform: Transform::from_xyz(
                                     trans.translation().x,
                                     trans.translation().y,
