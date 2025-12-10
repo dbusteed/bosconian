@@ -119,6 +119,6 @@ fn despawn_debug(mut commands: Commands, menu: Query<Entity, With<Menu>>) {
     println!("Byebye Debug");
     for ent in &menu {
         println!("ent!");
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
     }
 }

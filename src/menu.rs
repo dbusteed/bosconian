@@ -236,6 +236,6 @@ fn button_system(
 
 fn despawn_menu(mut commands: Commands, menu: Query<Entity, With<Menu>>) {
     for ent in &menu {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
     }
 }

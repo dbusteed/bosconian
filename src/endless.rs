@@ -1,4 +1,5 @@
 use bevy::{
+    color::palettes::css::*,
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };
@@ -131,7 +132,7 @@ fn setup_game(
     mut game_state: ResMut<NextState<EndlessGameState>>,
     mut level_events: EventWriter<SetupLevel>,
 ) {
-    let mut rapier_config = rapier_config.single_mut();
+    let mut rapier_config = rapier_config.single_mut().unwrap();
     rapier_config.gravity = Vec2::ZERO;
 
     // game camera
@@ -187,16 +188,14 @@ fn setup_game(
 
     // game boundary
     commands.spawn((
-        ShapeBundle {
-            path: GeometryBuilder::build_as(&shapes::Rectangle {
-                extents: Vec2::new(5000.0, 5000.0),
-                origin: RectangleOrigin::Center,
-                ..default()
-            }),
+        ShapeBuilder::with(&shapes::Rectangle {
+            extents: Vec2::new(5000.0, 5000.0),
+            origin: RectangleOrigin::Center,
             ..default()
-        },
-        Fill::color(Color::srgba(0f32, 0f32, 0f32, 0f32)),
-        Stroke::new(Color::srgb(1f32, 0f32, 0f32), 10.0),
+        })
+        .fill(Color::srgba(0f32, 0f32, 0f32, 0f32))
+        .stroke((Color::srgb(1f32, 0f32, 0f32), 10.0))
+        .build(),
         Collider::compound(vec![
             (Vec2::new(0., 2500.), 0f32, Collider::cuboid(2500., 2.5)),
             (Vec2::new(0., -2500.), 0f32, Collider::cuboid(2500., 2.5)),
@@ -230,15 +229,13 @@ fn setup_game(
 
     // minimap player
     commands.spawn((
-        ShapeBundle {
-            transform: Transform::from_xyz(0.0, 0.0, 3.0),
-            path: GeometryBuilder::build_as(&shapes::Circle {
-                radius: 5f32,
-                center: Vec2::ZERO,
-            }),
-            ..default()
-        },
-        Fill::color(Color::WHITE),
+        ShapeBuilder::with(&shapes::Circle {
+            radius: 5f32,
+            center: Vec2::ZERO,
+        })
+        .fill(WHITE)
+        .build(),
+        Transform::from_xyz(0.0, 0.0, 3.0),
         MinimapPlayer,
         RenderLayers::layer(1),
         GameNode,
@@ -261,7 +258,7 @@ fn setup_game(
     ));
 
     game_state.set(EndlessGameState::Setup);
-    level_events.send(SetupLevel);
+    level_events.write(SetupLevel);
 }
 
 fn setup_gameover(
@@ -269,7 +266,7 @@ fn setup_gameover(
     game_assets: Res<GameAssets>,
     q_camera: Query<&mut Transform, With<GameCamera>>,
 ) {
-    let camera = q_camera.get_single().unwrap();
+    let camera = q_camera.single().unwrap();
     let trans = camera.translation + Vec3::new(0.0, 100.0, 50.0);
     let texture = game_assets.game_over.clone();
 
@@ -342,7 +339,7 @@ fn setup_level(
     for _ in level_event.read() {
         game.setup = true;
 
-        let mut cam = minimap.get_single_mut().unwrap();
+        let mut cam = minimap.single_mut().unwrap();
         cam.is_active = false;
 
         for mut mm_trans in q_mm_player.iter_mut() {
@@ -378,12 +375,12 @@ fn countdown(
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
     mut game_start: ResMut<GameStartSeconds>,
 ) {
-    if let Ok(mut countdown) = q_countdown.get_single_mut() {
+    if let Ok(mut countdown) = q_countdown.single_mut() {
         countdown.0.tick(time.delta());
         if countdown.0.just_finished() {
             println!("{:?}", game.countdown);
             if game.countdown == 3 {
-                minimap.get_single_mut().unwrap().is_active = true;
+                minimap.single_mut().unwrap().is_active = true;
 
                 // make player
                 commands.spawn((
@@ -423,11 +420,11 @@ fn countdown(
                     // TODO initial spawn of stars and rocks
                 }
 
-                if let Ok(mut cam_trans) = q_camera.get_single_mut() {
+                if let Ok(mut cam_trans) = q_camera.single_mut() {
                     cam_trans.translation = Vec3::new(0.0, 0.0, cam_trans.translation.z);
                 }
 
-                // life_events.send(UpdateLivesEvent);
+                // life_events.write(UpdateLivesEvent);
             }
 
             if game.countdown <= 3 && game.countdown >= 1 {
@@ -454,7 +451,7 @@ fn countdown(
             if game.countdown == 0 {
                 game_start.0 = time.elapsed_secs();
                 game_state.set(EndlessGameState::Play);
-                q_player.get_single_mut().unwrap().linvel = Vec2::new(0.0, 400.0);
+                q_player.single_mut().unwrap().linvel = Vec2::new(0.0, 400.0);
 
                 for ent in &q_countdown_text {
                     commands.entity(ent).despawn();
@@ -488,7 +485,7 @@ fn spawn_ships_and_stars(
     }
 
     if fighter_count < max_fighters {
-        if let Ok(offset) = q_cam_offest.get_single() {
+        if let Ok(offset) = q_cam_offest.single() {
             let mut rng = rand::thread_rng();
             let angle: f32 = rng.gen_range(-PI..PI);
             let trans = Vec3::new(angle.cos(), angle.sin(), 10.0)
@@ -566,7 +563,7 @@ fn spawn_ships_and_stars(
         }
     }
 
-    if let Ok(mut timer) = q_spawn_timer.get_single_mut() {
+    if let Ok(mut timer) = q_spawn_timer.single_mut() {
         timer.0.tick(time.delta());
         if timer.0.just_finished() {
             let mut star_count = 0;
@@ -585,18 +582,16 @@ fn spawn_ships_and_stars(
 
                 let marker = commands
                     .spawn((
-                        ShapeBundle {
-                            transform: Transform {
-                                translation: world_to_minimap(Vec3::new(x, y, 3.0)),
-                                ..default()
-                            },
-                            path: GeometryBuilder::build_as(&shapes::Circle {
-                                radius: 7f32,
-                                center: Vec2::ZERO,
-                            }),
+                        ShapeBuilder::with(&shapes::Circle {
+                            radius: 7f32,
+                            center: Vec2::ZERO,
+                        })
+                        .fill(Color::srgb(0f32, 0.741, 0f32))
+                        .build(),
+                        Transform {
+                            translation: world_to_minimap(Vec3::new(x, y, 3.0)),
                             ..default()
                         },
-                        Fill::color(Color::srgb(0f32, 0.741, 0f32)),
                         MinimapStar,
                         RenderLayers::layer(1),
                         LevelNode,
@@ -721,7 +716,7 @@ fn listen_player_death_endless(
 ) {
     for _ in events.read() {
         println!("Event in listen_player_death_endless");
-        let mut cam = minimap.get_single_mut().unwrap();
+        let mut cam = minimap.single_mut().unwrap();
         cam.is_active = false;
 
         for mut mm_trans in q_mm_player.iter_mut() {
@@ -741,23 +736,23 @@ fn star_update(
 ) {
     for (ent, star, trans, nodes) in q_stars.iter() {
         let mut node_count = 0;
-        for &n in nodes.iter() {
+        for n in nodes.iter() {
             if q_star_node.get(n).is_ok() {
                 node_count += 1;
             }
         }
 
         if node_count == 0 {
-            if let Ok(mut timer) = q_star_timer.get_single_mut() {
+            if let Ok(mut timer) = q_star_timer.single_mut() {
                 if timer.0.finished() {
                     timer.0.set_duration(Duration::from_secs_f32(3.0));
                 }
             }
 
             commands.entity(star.0).despawn();
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).despawn();
 
-            explosion_events.send(ExplosionEvent {
+            explosion_events.write(ExplosionEvent {
                 size: ExplosionSize::Big,
                 x: trans.translation().x,
                 y: trans.translation().y,
@@ -779,9 +774,9 @@ fn check_collisions(
     mut q_star_node_textures: Query<&mut Sprite, With<StarNode>>,
 ) {
     // maybe not the best, if player is gone, do we still want explo-explo actions?
-    if let Ok((player, p_trans)) = q_player.get_single_mut() {
+    if let Ok((player, p_trans)) = q_player.single_mut() {
         let mut p = true;
-        let context = rapier_context.single();
+        let context = rapier_context.single().unwrap();
         for (e_ent, e_trans, explo) in q_explodables.iter() {
             // STEP 1 -- Explodable-Explodable interactions
             for (e_ent2, e_trans2, explo2) in q_explodables.iter() {
@@ -809,7 +804,7 @@ fn check_collisions(
                                     .remove::<Explodable>()
                                     .remove::<StarNode>();
 
-                                explosion_events.send(ExplosionEvent {
+                                explosion_events.write(ExplosionEvent {
                                     size: ExplosionSize::Small,
                                     x: trans.translation().x,
                                     y: trans.translation().y,
@@ -823,14 +818,14 @@ fn check_collisions(
                                     }
                                 }
 
-                                if let Ok(mut timer) = q_star_timer.get_single_mut() {
+                                if let Ok(mut timer) = q_star_timer.single_mut() {
                                     if timer.0.finished() {
                                         timer.0.set_duration(Duration::from_secs_f32(3.0));
                                     }
                                 }
-                                commands.entity(ent).despawn_recursive();
+                                commands.entity(ent).despawn();
 
-                                explosion_events.send(ExplosionEvent {
+                                explosion_events.write(ExplosionEvent {
                                     size: ExplosionSize::Big,
                                     x: trans.translation().x,
                                     y: trans.translation().y,
@@ -840,7 +835,7 @@ fn check_collisions(
                                 commands.entity(ent).despawn();
                             }
                             _ => {
-                                explosion_events.send(ExplosionEvent {
+                                explosion_events.write(ExplosionEvent {
                                     size: ExplosionSize::Small,
                                     x: trans.translation().x,
                                     y: trans.translation().y,
@@ -866,16 +861,16 @@ fn check_collisions(
                 }
 
                 commands.entity(player).despawn();
-                player_death_events.send(PlayerDeathEvent {});
+                player_death_events.write(PlayerDeathEvent {});
 
-                explosion_events.send(ExplosionEvent {
+                explosion_events.write(ExplosionEvent {
                     size: ExplosionSize::Small,
                     x: p_trans.translation().x,
                     y: p_trans.translation().y,
                 });
 
                 if explo.0 != ExplodableType::Laser {
-                    explosion_events.send(ExplosionEvent {
+                    explosion_events.write(ExplosionEvent {
                         size: ExplosionSize::Small,
                         x: e_trans.translation().x,
                         y: e_trans.translation().y,
@@ -896,10 +891,10 @@ fn check_collisions(
 
                 if p && context.intersection_pair(c_ent, player) == Some(true) {
                     commands.entity(player).despawn();
-                    player_death_events.send(PlayerDeathEvent {});
+                    player_death_events.write(PlayerDeathEvent {});
                     p = false;
 
-                    explosion_events.send(ExplosionEvent {
+                    explosion_events.write(ExplosionEvent {
                         size: ExplosionSize::Small,
                         x: p_trans.translation().x,
                         y: p_trans.translation().y,

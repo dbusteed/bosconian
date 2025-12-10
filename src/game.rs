@@ -1,6 +1,6 @@
 use super::{AppState, GameAssets};
 use bevy::{
-    audio::{AudioSink, Volume},
+    audio::AudioSink,
     prelude::*,
 };
 use bevy_rapier2d::prelude::*;
@@ -228,7 +228,7 @@ pub fn destroy_game(
     mut events: ResMut<Events<PlayerDeathEvent>>,
 ) {
     for ent in &menu {
-        commands.entity(ent).despawn_recursive();
+        commands.entity(ent).despawn();
     }
 
     events.clear();
@@ -297,7 +297,7 @@ pub fn move_enemy_ships(
     q_player: Query<&CameraOffset>,
     time: Res<Time>,
 ) {
-    if let Ok(player_pos) = q_player.get_single() {
+    if let Ok(player_pos) = q_player.single() {
         // TODO can they avoid rocks to some degree?
         for (mut vel, mut trans, mut ship) in query.iter_mut() {
             if let Some(target) = ship.target {
@@ -356,7 +356,7 @@ pub fn player_input(
     game_assets: Res<GameAssets>,
     mut player: Query<(&mut Transform, &mut Velocity, &mut CameraOffset), With<Player>>,
 ) {
-    if let Ok((mut trans, mut vel, mut offset)) = player.get_single_mut() {
+    if let Ok((mut trans, mut vel, mut offset)) = player.single_mut() {
         if let Some(keycode) = kb.get_just_pressed().last() {
             let mut rot: f32 = -1.0;
             match keycode {
@@ -470,11 +470,11 @@ pub fn star_node_shoot(
     mut q_player: Query<(Entity, &GlobalTransform), With<Player>>,
     game_assets: Res<GameAssets>,
 ) {
-    if let Ok((p_ent, p_trans)) = q_player.get_single_mut() {
-        let context = rapier_context.single();
+    if let Ok((p_ent, p_trans)) = q_player.single_mut() {
+        let context = rapier_context.single().unwrap();
         for (trans, mut node, children) in q_nodes.iter_mut() {
             for child in children.iter() {
-                if context.intersection_pair(*child, p_ent) == Some(true) {
+                if context.intersection_pair(child, p_ent) == Some(true) {
                     node.0.tick(time.delta());
                     if node.0.finished() {
                         let mut rng = rand::thread_rng();
