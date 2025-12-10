@@ -42,14 +42,14 @@ use super::{
         MinimapCamera,
         MinimapPlayer,
         MinimapStar,
+        PType,
         Player,
         PlayerDeathEvent,
-        PType,
         SetupLevel,
         StarCore,
         StarNode,
     },
-    AppState, GameAssets, Atlas
+    AppState, Atlas, GameAssets,
 };
 
 #[derive(Component)]
@@ -88,8 +88,14 @@ impl Plugin for EndlessPlugin {
             .add_systems(OnEnter(AppState::Endless), setup_game)
             .add_systems(OnExit(AppState::Endless), destroy_game)
             .add_systems(OnEnter(EndlessGameState::GameOver), setup_gameover)
-            .add_systems(Update, button_system.run_if(in_state(EndlessGameState::GameOver)))
-            .add_systems(Update, countdown.run_if(in_state(EndlessGameState::Countdown)))
+            .add_systems(
+                Update,
+                button_system.run_if(in_state(EndlessGameState::GameOver)),
+            )
+            .add_systems(
+                Update,
+                countdown.run_if(in_state(EndlessGameState::Countdown)),
+            )
             .add_systems(
                 Update,
                 (
@@ -111,36 +117,35 @@ impl Plugin for EndlessPlugin {
                 (animation, listen_player_death_endless, listen_explosion)
                     .run_if(not(in_state(EndlessGameState::None))),
             )
-            .add_systems(Update, setup_level.run_if(in_state(EndlessGameState::Setup)));
+            .add_systems(
+                Update,
+                setup_level.run_if(in_state(EndlessGameState::Setup)),
+            );
     }
 }
 
 fn setup_game(
     mut commands: Commands,
-    mut rapier_config: ResMut<RapierConfiguration>,
+    mut rapier_config: Query<&mut RapierConfiguration>,
     game_assets: Res<GameAssets>,
     mut game_state: ResMut<NextState<EndlessGameState>>,
     mut level_events: EventWriter<SetupLevel>,
 ) {
+    let mut rapier_config = rapier_config.single_mut();
     rapier_config.gravity = Vec2::ZERO;
 
     // game camera
     commands.spawn((
-        Camera2dBundle {
-            transform: Transform::from_xyz(0.0, 0.0, 999.0),
-            camera: Camera {
-                order: 0,
-                ..default()
-            },
-            // camera_2d: Camera2d {
-            //     clear_color: ClearColorConfig::None,
-            // },
-            projection: OrthographicProjection {
-                scale: 1.25,
-                ..default()
-            },
+        Camera2d,
+        Camera {
+            order: 0,
             ..default()
         },
+        Transform::from_xyz(0.0, 0.0, 999.0),
+        // OrthographicProjection {
+        //     scale: 1.25,
+        //     ..default()
+        // },
         // UiCameraConfig { show_ui: true },
         GameCamera,
         RenderLayers::from_layers(&[0]),
@@ -149,19 +154,14 @@ fn setup_game(
 
     // minimap / ui camera
     commands.spawn((
-        Camera2dBundle {
-            camera: Camera {
-                order: 1,
-                viewport: Some(Viewport {
-                    physical_position: UVec2::new(1000 - 250, 750 - 250),
-                    physical_size: UVec2::new(250, 250),
-                    ..default()
-                }),
+        Camera2d,
+        Camera {
+            order: 1,
+            viewport: Some(Viewport {
+                physical_position: UVec2::new(1000 - 250, 750 - 250),
+                physical_size: UVec2::new(250, 250),
                 ..default()
-            },
-            // camera_2d: Camera2d {
-            //     clear_color: ClearColorConfig::None,
-            // },
+            }),
             ..default()
         },
         // UiCameraConfig { show_ui: false },
@@ -174,11 +174,11 @@ fn setup_game(
     for x in (-3000..=3000).step_by(1000) {
         for y in (-3000..=3000).step_by(1000) {
             commands.spawn((
-                SpriteBundle {
-                    texture: game_assets.background.clone(),
-                    transform: Transform::from_xyz(x as f32, y as f32, 0.0),
+                Sprite {
+                    image: game_assets.background.clone(),
                     ..default()
                 },
+                Transform::from_xyz(x as f32, y as f32, 0.0),
                 RenderLayers::layer(0),
                 GameNode,
             ));
@@ -191,6 +191,7 @@ fn setup_game(
             path: GeometryBuilder::build_as(&shapes::Rectangle {
                 extents: Vec2::new(5000.0, 5000.0),
                 origin: RectangleOrigin::Center,
+                ..default()
             }),
             ..default()
         },
@@ -208,32 +209,29 @@ fn setup_game(
     ));
 
     // game score
-    commands.spawn((
-        TextBundle::from_sections([TextSection::new(
-            "00:00",
-            TextStyle {
-                font: game_assets.font.clone(),
-                font_size: 32.0,
-                color: Color::WHITE,
-            },
-        )])
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(5.0),
-            left: Val::Px(15.0),
-            ..default()
-        }),
-        ScoreText,
-        GameNode,
-    ));
+    // commands.spawn((
+    //     TextBundle::from_sections([TextSection::new(
+    //         "00:00",
+    //         TextStyle {
+    //             font: game_assets.font.clone(),
+    //             font_size: 32.0,
+    //             color: Color::WHITE,
+    //         },
+    //     )])
+    //     .with_style(Style {
+    //         position_type: PositionType::Absolute,
+    //         top: Val::Px(5.0),
+    //         left: Val::Px(15.0),
+    //         ..default()
+    //     }),
+    //     ScoreText,
+    //     GameNode,
+    // ));
 
     // minimap player
     commands.spawn((
         ShapeBundle {
-            spatial: SpatialBundle {
-                transform: Transform::from_xyz(0.0, 0.0, 3.0),
-                ..default()
-            },
+            transform: Transform::from_xyz(0.0, 0.0, 3.0),
             path: GeometryBuilder::build_as(&shapes::Circle {
                 radius: 5f32,
                 center: Vec2::ZERO,
@@ -276,12 +274,12 @@ fn setup_gameover(
     let texture = game_assets.game_over.clone();
 
     commands.spawn((
-        SpriteBundle {
-            texture,
-            transform: Transform {
-                translation: trans,
-                ..default()
-            },
+        Sprite {
+            image: texture,
+            ..default()
+        },
+        Transform {
+            translation: trans,
             ..default()
         },
         Name::from("Game Over Text"),
@@ -290,17 +288,14 @@ fn setup_gameover(
 
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(400.0),
-                    width: Val::Px(1000.0),
-                    height: Val::Px(350.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::SpaceEvenly,
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(400.0),
+                width: Val::Px(1000.0),
+                height: Val::Px(350.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::SpaceEvenly,
+                flex_direction: FlexDirection::Column,
                 ..default()
             },
             GameNode,
@@ -308,17 +303,15 @@ fn setup_gameover(
         .with_children(|parent| {
             parent
                 .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(225.0),
-                            height: Val::Px(70.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        background_color: Color::BLACK.into(),
+                    Button,
+                    Node {
+                        width: Val::Px(225.0),
+                        height: Val::Px(70.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
+                    BackgroundColor(Color::BLACK.into()),
                     GameButton {
                         action: GameButtonAction::ReturnToMenu,
                         idle_color: Color::srgb(0.15, 0.15, 0.15),
@@ -326,12 +319,13 @@ fn setup_gameover(
                     },
                 ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Menu",
-                        TextStyle {
+                    parent.spawn((
+                        Text::new("Menu"),
+                        TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                        TextFont {
                             font: game_assets.font.clone(),
                             font_size: 30.0,
-                            color: Color::srgb(0.9, 0.9, 0.9),
+                            ..default()
                         },
                     ));
                 });
@@ -364,11 +358,11 @@ fn update_score(
     game_start: Res<GameStartSeconds>,
     mut q_level_text: Query<&mut Text, With<ScoreText>>,
 ) {
-    let seconds = (time.elapsed_seconds() - game_start.0) as usize;
+    let seconds = (time.elapsed_secs() - game_start.0) as usize;
     let score = format!("{:02}:{:02}", seconds / 60, seconds % 60);
-    for mut text in &mut q_level_text {
-        text.sections[0].value = score.to_string();
-    }
+    // for mut text in &mut q_level_text {
+    //     text.sections[0].value = score.to_string();
+    // }
 }
 
 fn countdown(
@@ -393,24 +387,15 @@ fn countdown(
 
                 // make player
                 commands.spawn((
-                    // SpriteSheetBundle {
-                    //     texture: game_assets.player.texture.clone(),
-                    //     atlas: TextureAtlas {
-                    //         layout: game_assets.player.layout.clone(),
-                    //         index: 0
-                    //     },
-                    //     transform: Transform::from_xyz(0.0, 0.0, 1.0),
-                    //     ..default()
-                    // },
-                    SpriteBundle {
-                        texture: game_assets.player.texture.clone(),
-                        transform: Transform::from_xyz(0.0, 0.0, 1.0),
+                    Sprite {
+                        image: game_assets.player.texture.clone(),
+                        texture_atlas: Some(TextureAtlas {
+                            layout: game_assets.player.layout.clone(),
+                            index: 0,
+                        }),
                         ..default()
                     },
-                    TextureAtlas {
-                        layout: game_assets.player.layout.clone(),
-                        index: 0
-                    },
+                    Transform::from_xyz(0.0, 0.0, 1.0),
                     Animation {
                         timer: Timer::from_seconds(0.35, TimerMode::Repeating),
                         n_sprites: 2,
@@ -451,15 +436,15 @@ fn countdown(
                 }
 
                 commands.spawn((
-                    SpriteBundle {
-                        texture: game_assets.countdown.texture.clone(),
-                        transform: Transform::from_xyz(0.0, 0.0, 10.0),
-                        ..default()
-                    },
-                    TextureAtlas {
+                    Sprite {
+                        image: game_assets.countdown.texture.clone(),
+                        texture_atlas: Some(TextureAtlas {
                             layout: game_assets.countdown.layout.clone(),
                             index: game.countdown - 1,
-                        },
+                        }),
+                        ..default()
+                    },
+                    Transform::from_xyz(0.0, 0.0, 10.0),
                     CountdownText,
                     LevelNode,
                     GameNode,
@@ -467,7 +452,7 @@ fn countdown(
             }
 
             if game.countdown == 0 {
-                game_start.0 = time.elapsed_seconds();
+                game_start.0 = time.elapsed_secs();
                 game_state.set(EndlessGameState::Play);
                 q_player.get_single_mut().unwrap().linvel = Vec2::new(0.0, 400.0);
 
@@ -493,7 +478,7 @@ fn spawn_ships_and_stars(
     mut q_spawn_timer: Query<&mut StarSpawnTimer>,
     time: Res<Time>,
 ) {
-    let seconds = (time.elapsed_seconds() - game_start.0) as usize;
+    let seconds = (time.elapsed_secs() - game_start.0) as usize;
     let max_fighters = ((seconds / 30) * 5) + 5;
     let max_stars = ((seconds / 30) * 3) + 3;
 
@@ -513,13 +498,13 @@ fn spawn_ships_and_stars(
 
             if rng.gen_bool(0.5) {
                 commands.spawn((
-                    SpriteBundle {
-                        texture: game_assets.p_type.clone(),
-                        transform: Transform {
-                            translation: trans,
-                            rotation: Quat::from_rotation_z(angle),
-                            ..default()
-                        },
+                    Sprite {
+                        image: game_assets.p_type.clone(),
+                        ..default()
+                    },
+                    Transform {
+                        translation: trans,
+                        rotation: Quat::from_rotation_z(angle),
                         ..default()
                     },
                     Velocity::default(),
@@ -546,13 +531,13 @@ fn spawn_ships_and_stars(
                 ));
             } else {
                 commands.spawn((
-                    SpriteBundle {
-                        texture: game_assets.i_type.clone(),
-                        transform: Transform {
-                            translation: trans,
-                            rotation: Quat::from_rotation_z(angle),
-                            ..default()
-                        },
+                    Sprite {
+                        image: game_assets.i_type.clone(),
+                        ..default()
+                    },
+                    Transform {
+                        translation: trans,
+                        rotation: Quat::from_rotation_z(angle),
                         ..default()
                     },
                     Velocity::default(),
@@ -601,11 +586,8 @@ fn spawn_ships_and_stars(
                 let marker = commands
                     .spawn((
                         ShapeBundle {
-                            spatial: SpatialBundle {
-                                transform: Transform {
-                                    translation: world_to_minimap(Vec3::new(x, y, 3.0)),
-                                    ..default()
-                                },
+                            transform: Transform {
+                                translation: world_to_minimap(Vec3::new(x, y, 3.0)),
                                 ..default()
                             },
                             path: GeometryBuilder::build_as(&shapes::Circle {
@@ -674,11 +656,11 @@ fn spawn_ships_and_stars(
 
                 commands
                     .spawn((
-                        SpriteBundle {
-                            texture: star_config.0,
-                            transform: Transform::from_xyz(x, y, 1.0),
+                        Sprite {
+                            image: star_config.0,
                             ..default()
                         },
+                        Transform::from_xyz(x, y, 1.0),
                         RigidBody::Fixed,
                         Collider::ball(20.0),
                         StarCore(marker),
@@ -696,15 +678,15 @@ fn spawn_ships_and_stars(
                         for (pos, atlas) in star_config.1 {
                             parent
                                 .spawn((
-                                    SpriteBundle {
-                                        texture: atlas.texture,
-                                        transform: Transform {
-                                            translation: pos,
-                                            ..default()
-                                        },
+                                    Sprite {
+                                        image: atlas.texture,
+                                        texture_atlas: Some(TextureAtlas::from(atlas.layout)),
                                         ..default()
                                     },
-                                    TextureAtlas::from(atlas.layout),
+                                    Transform {
+                                        translation: pos,
+                                        ..default()
+                                    },
                                     RigidBody::Fixed,
                                     Collider::ball(32.0),
                                     StarNode(Timer::from_seconds(
@@ -786,7 +768,7 @@ fn star_update(
 
 fn check_collisions(
     mut commands: Commands,
-    rapier_context: Res<RapierContext>,
+    rapier_context: ReadRapierContext,
     mut q_player: Query<(Entity, &GlobalTransform), With<Player>>,
     q_explodables: Query<(Entity, &GlobalTransform, &Explodable), With<Explodable>>,
     q_collidables: Query<(Entity, &GlobalTransform, &Collidable), With<Collidable>>,
@@ -794,13 +776,12 @@ fn check_collisions(
     mut player_death_events: EventWriter<PlayerDeathEvent>,
     q_stars: Query<(Entity, &StarCore)>,
     mut q_star_timer: Query<&mut StarSpawnTimer>,
-    mut q_star_node_textures: Query<&mut TextureAtlas, With<StarNode>>,
-
+    mut q_star_node_textures: Query<&mut Sprite, With<StarNode>>,
 ) {
     // maybe not the best, if player is gone, do we still want explo-explo actions?
     if let Ok((player, p_trans)) = q_player.get_single_mut() {
         let mut p = true;
-
+        let context = rapier_context.single();
         for (e_ent, e_trans, explo) in q_explodables.iter() {
             // STEP 1 -- Explodable-Explodable interactions
             for (e_ent2, e_trans2, explo2) in q_explodables.iter() {
@@ -809,12 +790,14 @@ fn check_collisions(
                     continue;
                 }
 
-                if rapier_context.intersection_pair(e_ent, e_ent2) == Some(true) {
+                if context.intersection_pair(e_ent, e_ent2) == Some(true) {
                     for (ent, trans, exp) in [(e_ent, e_trans, explo), (e_ent2, e_trans2, explo2)] {
                         match exp.0 {
                             ExplodableType::StarNode => {
-                                                                if let Ok(mut atlas) = q_star_node_textures.get_mut(e_ent) {
-                                    atlas.index = 1;
+                                if let Ok(mut sprite) = q_star_node_textures.get_mut(e_ent) {
+                                    if let Some(atlas) = &mut sprite.texture_atlas {
+                                        atlas.index = 1;
+                                    }
                                 }
                                 commands
                                     .entity(ent)
@@ -870,11 +853,13 @@ fn check_collisions(
             }
 
             // STEP 2 -- Player-Explodable interactions
-            if rapier_context.intersection_pair(e_ent, player) == Some(true) {
+            if context.intersection_pair(e_ent, player) == Some(true) {
                 match explo.0 {
                     ExplodableType::StarNode => {
-                        if let Ok(mut atlas) = q_star_node_textures.get_mut(e_ent) {
-                            atlas.index = 1;
+                        if let Ok(mut sprite) = q_star_node_textures.get_mut(e_ent) {
+                            if let Some(atlas) = &mut sprite.texture_atlas {
+                                atlas.index = 1;
+                            }
                         }
                     }
                     _ => commands.entity(e_ent).despawn(),
@@ -900,7 +885,7 @@ fn check_collisions(
 
             // STEP 3 -- Explodable-Collidable & Player-Collidable Interactions
             for (c_ent, _, __) in q_collidables.iter() {
-                if rapier_context.intersection_pair(e_ent, c_ent) == Some(true) {
+                if context.intersection_pair(e_ent, c_ent) == Some(true) {
                     match explo.0 {
                         ExplodableType::Laser => {
                             commands.entity(e_ent).despawn();
@@ -909,7 +894,7 @@ fn check_collisions(
                     }
                 }
 
-                if p && rapier_context.intersection_pair(c_ent, player) == Some(true) {
+                if p && context.intersection_pair(c_ent, player) == Some(true) {
                     commands.entity(player).despawn();
                     player_death_events.send(PlayerDeathEvent {});
                     p = false;

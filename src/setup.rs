@@ -1,4 +1,4 @@
-use bevy::{audio::Volume, prelude::*};
+use bevy::prelude::*;
 
 use super::AppState;
 
@@ -64,15 +64,7 @@ fn setup(
     mut app_state: ResMut<NextState<AppState>>
 ) {
     commands.spawn((
-        AudioBundle {
-            source: asset_server.load("sounds/Test.ogg"),
-            settings: PlaybackSettings {
-                mode: bevy::audio::PlaybackMode::Loop,
-                volume: Volume::new(0.25),
-                ..default()
-            },
-            ..default()
-        },
+        AudioPlayer::new(asset_server.load("sounds/Test.ogg")),
         Name::from("Background Music"),
     ));
 

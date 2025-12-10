@@ -147,17 +147,19 @@ pub struct SetupLevel;
 pub fn animation(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Animation, &mut TextureAtlas)>,
+    mut query: Query<(Entity, &mut Animation, &mut Sprite)>,
 ) {
     for (entity, mut anim, mut sprite) in &mut query {
         anim.timer.tick(time.delta());
         if anim.timer.just_finished() {
-            sprite.index += 1;
-            if sprite.index >= anim.n_sprites {
-                if anim.one_time {
-                    commands.entity(entity).despawn();
-                } else {
-                    sprite.index = 0;
+            if let Some(atlas) = &mut sprite.texture_atlas {
+                atlas.index += 1;
+                if atlas.index >= anim.n_sprites {
+                    if anim.one_time {
+                        commands.entity(entity).despawn();
+                    } else {
+                        atlas.index = 0;
+                    }
                 }
             }
         }
@@ -220,7 +222,11 @@ pub fn button_system(
     }
 }
 
-pub fn destroy_game(mut commands: Commands, menu: Query<Entity, With<GameNode>>, mut events: ResMut<Events<PlayerDeathEvent>>) {
+pub fn destroy_game(
+    mut commands: Commands,
+    menu: Query<Entity, With<GameNode>>,
+    mut events: ResMut<Events<PlayerDeathEvent>>,
+) {
     for ent in &menu {
         commands.entity(ent).despawn_recursive();
     }
@@ -248,12 +254,14 @@ pub fn listen_explosion(
         match evt.size {
             ExplosionSize::Small => {
                 commands.spawn((
-                    SpriteBundle {
-                        texture: game_assets.explosion.texture.clone(),
-                        transform: Transform::from_xyz(evt.x, evt.y, 3.0),
+                    Sprite {
+                        image: game_assets.explosion.texture.clone(),
+                        texture_atlas: Some(TextureAtlas::from(
+                            game_assets.explosion.layout.clone(),
+                        )),
                         ..default()
                     },
-                    TextureAtlas::from(game_assets.explosion.layout.clone()),
+                    Transform::from_xyz(evt.x, evt.y, 3.0),
                     Animation {
                         timer: Timer::from_seconds(0.15, TimerMode::Repeating),
                         n_sprites: 3,
@@ -264,12 +272,14 @@ pub fn listen_explosion(
             }
             ExplosionSize::Big => {
                 commands.spawn((
-                    SpriteBundle {
-                        texture: game_assets.big_explosion.texture.clone(),
-                        transform: Transform::from_xyz(evt.x, evt.y, 3.0),
+                    Sprite {
+                        image: game_assets.big_explosion.texture.clone(),
+                        texture_atlas: Some(TextureAtlas::from(
+                            game_assets.big_explosion.layout.clone(),
+                        )),
                         ..default()
                     },
-                    TextureAtlas::from(game_assets.big_explosion.layout.clone()),
+                    Transform::from_xyz(evt.x, evt.y, 3.0),
                     Animation {
                         timer: Timer::from_seconds(0.15, TimerMode::Repeating),
                         n_sprites: 3,
@@ -325,7 +335,7 @@ pub fn move_enemy_ships(
 
                 // find a new target if it's searched to long
                 if let Some(target_time) = ship.time_got_target {
-                    if time.elapsed_seconds() - target_time > 0.5 {
+                    if time.elapsed_secs() - target_time > 0.5 {
                         ship.target = None;
                         ship.time_got_target = None;
                     }
@@ -334,7 +344,7 @@ pub fn move_enemy_ships(
                 let mut rng = rand::thread_rng();
                 let offset = Vec2::new(rng.gen_range(-100.0..100.0), rng.gen_range(-100.0..100.0));
                 ship.target = Some(player_pos.0.truncate() + offset);
-                ship.time_got_target = Some(time.elapsed_seconds());
+                ship.time_got_target = Some(time.elapsed_secs());
             }
         }
     }
@@ -378,29 +388,25 @@ pub fn player_input(
                         texture2 = game_assets.v_laser.clone();
                     }
 
-                    commands.spawn((
-                        AudioBundle {
-                            source: game_assets.laser_sound.clone(),
-                            settings: PlaybackSettings {
-                                volume: Volume::new(0.25),
-                                ..default()
-                            },
-                            ..default()
-                        },
-                        SoundEffect,
-                        GameNode,
-                    ));
+                    // commands.spawn((
+                    //     AudioBundle {
+                    //         source: game_assets.laser_sound.clone(),
+                    //         settings: PlaybackSettings {
+                    //             volume: Volume::new(0.25),
+                    //             ..default()
+                    //         },
+                    //         ..default()
+                    //     },
+                    //     SoundEffect,
+                    //     GameNode,
+                    // ));
 
                     commands.spawn((
-                        SpriteBundle {
-                            texture: texture1,
-                            transform: Transform::from_xyz(
-                                trans.translation.x,
-                                trans.translation.y,
-                                1.0,
-                            ),
+                        Sprite {
+                            image: texture1,
                             ..default()
                         },
+                        Transform::from_xyz(trans.translation.x, trans.translation.y, 1.0),
                         RigidBody::Dynamic,
                         Ccd::enabled(),
                         Collider::ball(5.0),
@@ -421,15 +427,11 @@ pub fn player_input(
                     ));
 
                     commands.spawn((
-                        SpriteBundle {
-                            texture: texture2,
-                            transform: Transform::from_xyz(
-                                trans.translation.x,
-                                trans.translation.y,
-                                1.0,
-                            ),
+                        Sprite {
+                            image: texture2,
                             ..default()
                         },
+                        Transform::from_xyz(trans.translation.x, trans.translation.y, 1.0),
                         RigidBody::Dynamic,
                         Ccd::enabled(),
                         Collider::ball(5.0),
@@ -462,16 +464,17 @@ pub fn player_input(
 
 pub fn star_node_shoot(
     mut commands: Commands,
-    rapier_context: Res<RapierContext>,
+    rapier_context: ReadRapierContext,
     time: Res<Time>,
     mut q_nodes: Query<(&GlobalTransform, &mut StarNode, &Children)>,
     mut q_player: Query<(Entity, &GlobalTransform), With<Player>>,
     game_assets: Res<GameAssets>,
 ) {
     if let Ok((p_ent, p_trans)) = q_player.get_single_mut() {
+        let context = rapier_context.single();
         for (trans, mut node, children) in q_nodes.iter_mut() {
             for child in children.iter() {
-                if rapier_context.intersection_pair(*child, p_ent) == Some(true) {
+                if context.intersection_pair(*child, p_ent) == Some(true) {
                     node.0.tick(time.delta());
                     if node.0.finished() {
                         let mut rng = rand::thread_rng();
@@ -485,16 +488,14 @@ pub fn star_node_shoot(
                             * 150.0;
 
                         commands.spawn((
-                            SpriteBundle {
-                                texture: game_assets.star_node_laser.texture.clone(),
-                                transform: Transform::from_xyz(
-                                    trans.translation().x,
-                                    trans.translation().y,
-                                    5.0,
-                                ),
+                            Sprite {
+                                image: game_assets.star_node_laser.texture.clone(),
+                                texture_atlas: Some(TextureAtlas::from(
+                                    game_assets.star_node_laser.layout.clone(),
+                                )),
                                 ..default()
                             },
-                            TextureAtlas::from(game_assets.star_node_laser.layout.clone()),
+                            Transform::from_xyz(trans.translation().x, trans.translation().y, 5.0),
                             Animation {
                                 timer: Timer::from_seconds(0.08, TimerMode::Repeating),
                                 n_sprites: 4,
@@ -529,7 +530,8 @@ pub fn despawn_finished_sound_effects(
     query: Query<(Entity, &AudioSink), With<SoundEffect>>,
 ) {
     for (entity, sink) in query.iter() {
-        if sink.empty() { // playback ended
+        if sink.empty() {
+            // playback ended
             commands.entity(entity).despawn();
         }
     }

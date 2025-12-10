@@ -37,35 +37,36 @@ fn setup_menu(
     asset_server: Res<AssetServer>,
 ) {
     commands.spawn((
-        Camera2dBundle::default(),
+        Camera2d,
         Menu,
         Name::from("Menu Camera"),
     ));
 
     // background
     commands.spawn((
-        SpriteBundle {
-            texture: game_assets.menu_background.clone(),
-            transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        Sprite {
+            image: game_assets.menu_background.clone(),
             ..default()
         },
+        Transform::from_xyz(0.0, 0.0, 0.0),
         Menu,
         Name::from("Menu Background"),
     ));
 
     // github button
     commands.spawn((
-        ButtonBundle {
-            style: Style {
-                top: Val::Px(8.0),
-                right: Val::Px(-1000.0 + 48.0 + 8.0),
-                width: Val::Px(48.0),
-                height: Val::Px(48.0),
-                ..default()
-            },
-            background_color: BackgroundColor::from(Color::WHITE),
+        Button,
+        Node {
+            top: Val::Px(8.0),
+            right: Val::Px(-1000.0 + 48.0 + 8.0),
+            width: Val::Px(48.0),
+            height: Val::Px(48.0),
+            ..default()
+        },
+        BackgroundColor::from(Color::WHITE),
+        Sprite {
             image: asset_server.load("github.png").into(),
-            z_index: bevy::ui::ZIndex::Local(10),
+            // z_index: bevy::ui::ZIndex::Local(10),
             ..default()
         },
         MenuButton {
@@ -80,17 +81,14 @@ fn setup_menu(
     // menu buttons
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    top: Val::Px(400.0),
-                    width: Val::Px(1000.0),
-                    height: Val::Px(350.0),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::SpaceEvenly,
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(400.0),
+                width: Val::Px(1000.0),
+                height: Val::Px(350.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::SpaceEvenly,
+                flex_direction: FlexDirection::Column,
                 ..default()
             },
             Menu,
@@ -99,17 +97,15 @@ fn setup_menu(
         .with_children(|parent| {
             parent
                 .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(225.0),
-                            height: Val::Px(70.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        background_color: Color::srgb(0.86, 0.88, 0.91).into(),
+                    Button,
+                    Node {
+                        width: Val::Px(225.0),
+                        height: Val::Px(70.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
+                    BackgroundColor(Color::srgb(0.86, 0.88, 0.91)),
                     MenuButton {
                         action: MenuButtonAction::Classic,
                         idle_color: Color::srgb(0.86, 0.88, 0.91),
@@ -117,29 +113,28 @@ fn setup_menu(
                     },
                 ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Classic",
-                        TextStyle {
+                    parent.spawn((
+                        Text::new("Classic"),
+                        TextColor(Color::srgb(0.0, 0.0, 0.0)),
+                        TextFont {
                             font: game_assets.font.clone(),
                             font_size: 30.0,
-                            color: Color::srgb(0.0, 0.0, 0.0),
+                            ..default()
                         },
                     ));
                 });
 
             parent
                 .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(225.0),
-                            height: Val::Px(70.0),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        background_color: Color::srgb(0.86, 0.88, 0.91).into(),
+                    Button,
+                    Node {
+                        width: Val::Px(225.0),
+                        height: Val::Px(70.0),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
                     },
+                    BackgroundColor(Color::srgb(0.86, 0.88, 0.91)),
                     MenuButton {
                         action: MenuButtonAction::Endless,
                         idle_color: Color::srgb(0.86, 0.88, 0.91),
@@ -147,13 +142,14 @@ fn setup_menu(
                     },
                 ))
                 .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Endless",
-                        TextStyle {
+                    parent.spawn((
+                        Text::new("Endless"),
+                        TextColor(Color::srgb(0.0, 0.0, 0.0)),
+                        TextFont {
                             font: game_assets.font.clone(),
                             font_size: 30.0,
-                            color: Color::srgb(0.0, 0.0, 0.0),
-                        },
+                            ..default()
+                        }
                     ));
                 });
 
@@ -161,17 +157,15 @@ fn setup_menu(
             if !cfg!(all(target_arch = "wasm32", target_os = "unknown")) {
                 parent
                     .spawn((
-                        ButtonBundle {
-                            style: Style {
-                                width: Val::Px(225.0),
-                                height: Val::Px(70.0),
-                                justify_content: JustifyContent::Center,
-                                align_items: AlignItems::Center,
-                                ..default()
-                            },
-                            background_color: Color::srgb(0.86, 0.88, 0.91).into(),
+                        Button,
+                        Node {
+                            width: Val::Px(225.0),
+                            height: Val::Px(70.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
                             ..default()
                         },
+                        BackgroundColor(Color::srgb(0.86, 0.88, 0.91)),
                         MenuButton {
                             action: MenuButtonAction::Quit,
                             idle_color: Color::srgb(0.86, 0.88, 0.91),
@@ -179,13 +173,14 @@ fn setup_menu(
                         },
                     ))
                     .with_children(|parent| {
-                        parent.spawn(TextBundle::from_section(
-                            "Quit",
-                            TextStyle {
+                        parent.spawn((
+                            Text::new("Quit"),
+                            TextColor(Color::srgb(0.0, 0.0, 0.0)),
+                            TextFont {
                                 font: game_assets.font.clone(),
                                 font_size: 30.0,
-                                color: Color::srgb(0.0, 0.0, 0.0),
-                            },
+                                ..default()
+                            }
                         ));
                     });
             }
