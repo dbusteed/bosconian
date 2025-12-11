@@ -128,17 +128,17 @@ pub struct StarNode(pub Timer);
 //
 // events
 //
-#[derive(Event)]
+#[derive(Message)]
 pub struct ExplosionEvent {
     pub size: ExplosionSize,
     pub x: f32,
     pub y: f32,
 }
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct PlayerDeathEvent;
 
-#[derive(Event)]
+#[derive(Message)]
 pub struct SetupLevel;
 
 //
@@ -212,11 +212,11 @@ pub fn button_system(
             },
             Interaction::Hovered => {
                 *color = button.hover_color.into();
-                border_color.0 = Color::WHITE;
+                border_color.bottom = Color::WHITE;
             }
             Interaction::None => {
                 *color = button.idle_color.into();
-                border_color.0 = Color::BLACK;
+                border_color.bottom = Color::BLACK;
             }
         }
     }
@@ -225,7 +225,7 @@ pub fn button_system(
 pub fn destroy_game(
     mut commands: Commands,
     menu: Query<Entity, With<GameNode>>,
-    mut events: ResMut<Events<PlayerDeathEvent>>,
+    mut events: ResMut<Messages<PlayerDeathEvent>>,
 ) {
     for ent in &menu {
         commands.entity(ent).despawn();
@@ -247,7 +247,7 @@ pub fn follow_camera(
 
 pub fn listen_explosion(
     mut commands: Commands,
-    mut events: EventReader<ExplosionEvent>,
+    mut events: MessageReader<ExplosionEvent>,
     game_assets: Res<GameAssets>,
 ) {
     for evt in events.read() {
@@ -476,7 +476,7 @@ pub fn star_node_shoot(
             for child in children.iter() {
                 if context.intersection_pair(child, p_ent) == Some(true) {
                     node.0.tick(time.delta());
-                    if node.0.finished() {
+                    if node.0.is_finished() {
                         let mut rng = rand::thread_rng();
                         node.0
                             .set_duration(Duration::from_secs_f32(rng.gen_range(1.0..4.0)));

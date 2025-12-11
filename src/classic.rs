@@ -1,8 +1,7 @@
 use bevy::{
     color::palettes::css::*,
-    // core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
-    render::{camera::Viewport, view::RenderLayers},
+    camera::{Viewport, visibility::RenderLayers}
 };
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -47,7 +46,7 @@ struct SetupTimer(Timer);
 #[derive(Component)]
 struct ITypeTimer(Timer);
 
-#[derive(Event)]
+#[derive(Message)]
 struct UpdateLivesEvent;
 
 #[derive(Resource)]
@@ -79,10 +78,10 @@ pub struct ClassicPlugin;
 impl Plugin for ClassicPlugin {
     fn build(&self, app: &mut App) {
         app.insert_state(ClassicGameState::None)
-            .add_event::<ExplosionEvent>()
-            .add_event::<PlayerDeathEvent>()
-            .add_event::<UpdateLivesEvent>()
-            .add_event::<SetupLevel>()
+            .add_message::<ExplosionEvent>()
+            .add_message::<PlayerDeathEvent>()
+            .add_message::<UpdateLivesEvent>()
+            .add_message::<SetupLevel>()
             .add_systems(OnEnter(AppState::Classic), setup_game)
             .add_systems(OnExit(AppState::Classic), destroy_game)
             .add_systems(OnEnter(ClassicGameState::GameOver), setup_gameover)
@@ -133,7 +132,7 @@ fn setup_game(
     mut rapier_config: Query<&mut RapierConfiguration>,
     game_assets: Res<GameAssets>,
     mut game_state: ResMut<NextState<ClassicGameState>>,
-    mut level_events: EventWriter<SetupLevel>,
+    mut level_events: MessageWriter<SetupLevel>,
 ) {
     let mut rapier_config = rapier_config.single_mut().unwrap();
     rapier_config.gravity = Vec2::ZERO;
@@ -398,7 +397,7 @@ fn setup_gameover(
 }
 
 fn setup_level(
-    mut level_event: EventReader<SetupLevel>,
+    mut level_event: MessageReader<SetupLevel>,
     mut game: ResMut<Game>,
     mut game_state: ResMut<NextState<ClassicGameState>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
@@ -430,7 +429,7 @@ fn countdown(
     game_assets: Res<GameAssets>,
     mut game: ResMut<Game>,
     mut game_state: ResMut<NextState<ClassicGameState>>,
-    mut life_events: EventWriter<UpdateLivesEvent>,
+    mut life_events: MessageWriter<UpdateLivesEvent>,
     q_countdown_text: Query<Entity, With<CountdownText>>,
     q_red_alert: Query<Entity, With<RedAlert>>,
     q_i_type: Query<Entity, (With<IType>, Without<PType>)>,
@@ -487,7 +486,7 @@ fn countdown(
                 }
 
                 for mut text in &mut q_level_text {
-                    text.0 = "Stuff".to_string();
+                    text.0 = "Level 1".to_string();
                     // text.sections[1].value = game.level.to_string();
                 }
 
@@ -783,7 +782,7 @@ fn spawn_enemy_ships(
         p_count += 1;
     }
 
-    if i_count < max_i && game.itype_timer.finished() {
+    if i_count < max_i && game.itype_timer.is_finished() {
         if let Ok(offset) = q_cam_offest.single() {
             let angle: f32 = rng.gen_range(-PI..PI);
             let trans = Vec3::new(angle.cos(), angle.sin(), 10.0)
@@ -826,7 +825,7 @@ fn spawn_enemy_ships(
         }
     }
 
-    if p_count < max_p && game.ptype_timer.finished() {
+    if p_count < max_p && game.ptype_timer.is_finished() {
         if let Ok(offset) = q_cam_offest.single() {
             let angle: f32 = rng.gen_range(-PI..PI);
             let trans = Vec3::new(angle.cos(), angle.sin(), 10.0)
@@ -872,7 +871,7 @@ fn spawn_enemy_ships(
 
 fn listen_update_lives(
     mut commands: Commands,
-    mut events: EventReader<UpdateLivesEvent>,
+    mut events: MessageReader<UpdateLivesEvent>,
     game_assets: Res<GameAssets>,
     game: Res<Game>,
     q_lives: Query<Entity, With<Lives>>,
@@ -905,7 +904,7 @@ fn listen_update_lives(
 }
 
 fn listen_player_death_classic(
-    mut events: EventReader<PlayerDeathEvent>,
+    mut events: MessageReader<PlayerDeathEvent>,
     mut game_state: ResMut<NextState<ClassicGameState>>,
     mut game: ResMut<Game>,
     mut q_mm_player: Query<&mut Transform, With<MinimapPlayer>>,
@@ -934,8 +933,8 @@ fn star_update(
     mut commands: Commands,
     mut game: ResMut<Game>,
     mut game_state: ResMut<NextState<ClassicGameState>>,
-    mut level_events: EventWriter<SetupLevel>,
-    mut explosion_events: EventWriter<ExplosionEvent>,
+    mut level_events: MessageWriter<SetupLevel>,
+    mut explosion_events: MessageWriter<ExplosionEvent>,
     q_stars: Query<(Entity, &StarCore, &GlobalTransform, &Children)>,
     q_star_node: Query<&StarNode>,
     q_level_nodes: Query<Entity, With<LevelNode>>,
@@ -979,8 +978,8 @@ fn check_collisions(
     mut q_player: Query<(Entity, &GlobalTransform), With<Player>>,
     q_explodables: Query<(Entity, &GlobalTransform, &Explodable), With<Explodable>>,
     q_collidables: Query<(Entity, &GlobalTransform, &Collidable), With<Collidable>>,
-    mut explosion_events: EventWriter<ExplosionEvent>,
-    mut player_death_events: EventWriter<PlayerDeathEvent>,
+    mut explosion_events: MessageWriter<ExplosionEvent>,
+    mut player_death_events: MessageWriter<PlayerDeathEvent>,
     q_stars: Query<(Entity, &StarCore)>,
     mut q_star_node_textures: Query<&mut Sprite, With<StarNode>>,
 ) {

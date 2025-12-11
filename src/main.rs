@@ -33,7 +33,7 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "Bosconian".into(),
-                        resolution: WindowResolution::new(1000., 750.)
+                        resolution: WindowResolution::new(1000, 750)
                             .with_scale_factor_override(1.0),
                         present_mode: PresentMode::AutoVsync,
                         prevent_default_event_handling: false,
@@ -47,7 +47,8 @@ fn main() {
             // RapierDebugRenderPlugin::default(),
             // bevy::diagnostic::LogDiagnosticsPlugin::default(),
             // bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
-            // bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+            // EguiPlugin::default(),
+            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
             setup::SetupPlugin,
             menu::MenuPlugin,
             classic::ClassicPlugin,

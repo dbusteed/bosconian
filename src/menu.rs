@@ -36,11 +36,7 @@ fn setup_menu(
     game_assets: Res<GameAssets>,
     asset_server: Res<AssetServer>,
 ) {
-    commands.spawn((
-        Camera2d,
-        Menu,
-        Name::from("Menu Camera"),
-    ));
+    commands.spawn((Camera2d, Menu, Name::from("Menu Camera")));
 
     // background
     commands.spawn((
@@ -54,29 +50,42 @@ fn setup_menu(
     ));
 
     // github button
-    commands.spawn((
-        Button,
-        Node {
-            top: Val::Px(8.0),
-            right: Val::Px(-1000.0 + 48.0 + 8.0),
-            width: Val::Px(48.0),
-            height: Val::Px(48.0),
-            ..default()
-        },
-        BackgroundColor::from(Color::WHITE),
-        Sprite {
-            image: asset_server.load("github.png").into(),
-            // z_index: bevy::ui::ZIndex::Local(10),
-            ..default()
-        },
-        MenuButton {
-            action: MenuButtonAction::VisitRepo,
-            idle_color: Color::srgb(0.70, 0.70, 0.70),
-            hover_color: Color::srgb(1.0, 1.0, 1.0),
-        },
-        Menu,
-        Name::from("Menu GitHub"),
-    ));
+    commands
+        .spawn((
+            Button,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(8.0),
+                right: Val::Px(-1000.0 + 48.0 + 8.0),
+                width: Val::Px(48.0),
+                height: Val::Px(48.0),
+                ..default()
+            },
+            BackgroundColor::from(Color::WHITE),
+            // Image::new(asset_server.load("github.png")),
+            MenuButton {
+                action: MenuButtonAction::VisitRepo,
+                idle_color: Color::srgb(0.70, 0.70, 0.70),
+                hover_color: Color::srgb(1.0, 1.0, 1.0),
+            },
+            Menu,
+            Name::from("Menu GitHub"),
+        ));
+        // .with_children(|parent| {
+        //     parent.spawn(
+        //         (
+        //             ImageNode {
+        //                 image: asset_server.load("github.png"),
+        //                 ..default()
+        //             },
+        //             Node {
+        //                 // width: px(256),
+        //                 // height: px(256),
+        //                 ..default()
+        //             }
+        //         ),
+        //     );
+        // });
 
     // menu buttons
     commands
@@ -118,7 +127,7 @@ fn setup_menu(
                         TextColor(Color::srgb(0.0, 0.0, 0.0)),
                         TextFont {
                             font: game_assets.font.clone(),
-                            font_size: 30.0,
+                            font_size: 24.0,
                             ..default()
                         },
                     ));
@@ -147,9 +156,9 @@ fn setup_menu(
                         TextColor(Color::srgb(0.0, 0.0, 0.0)),
                         TextFont {
                             font: game_assets.font.clone(),
-                            font_size: 30.0,
+                            font_size: 24.0,
                             ..default()
-                        }
+                        },
                     ));
                 });
 
@@ -178,9 +187,9 @@ fn setup_menu(
                             TextColor(Color::srgb(0.0, 0.0, 0.0)),
                             TextFont {
                                 font: game_assets.font.clone(),
-                                font_size: 30.0,
+                                font_size: 24.0,
                                 ..default()
-                            }
+                            },
                         ));
                     });
             }
@@ -198,7 +207,7 @@ fn button_system(
         (Changed<Interaction>, With<Button>),
     >,
     mut game_state: ResMut<NextState<AppState>>,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     // println!("Button System");
     for (interaction, button, mut color, mut border_color) in &mut interaction_query {
@@ -209,7 +218,7 @@ fn button_system(
                     MenuButtonAction::Endless => game_state.set(AppState::Endless),
                     MenuButtonAction::Quit => {
                         // .send returns the eventID, suppress with ;
-                        exit.send(AppExit::Success);
+                        exit.write(AppExit::Success);
                     }
                     MenuButtonAction::VisitRepo => {
                         match webbrowser::open(REPO_URL) {
@@ -224,11 +233,11 @@ fn button_system(
             }
             Interaction::Hovered => {
                 *color = button.hover_color.into();
-                border_color.0 = Color::WHITE;
+                border_color.bottom = Color::WHITE;
             }
             Interaction::None => {
                 *color = button.idle_color.into();
-                border_color.0 = Color::BLACK;
+                border_color.bottom = Color::BLACK;
             }
         }
     }

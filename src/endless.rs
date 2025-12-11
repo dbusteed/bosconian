@@ -1,7 +1,7 @@
 use bevy::{
     color::palettes::css::*,
     prelude::*,
-    render::{camera::Viewport, view::RenderLayers},
+    camera::{Viewport, visibility::RenderLayers}
 };
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -82,9 +82,9 @@ pub struct EndlessPlugin;
 impl Plugin for EndlessPlugin {
     fn build(&self, app: &mut App) {
         app.insert_state(EndlessGameState::None)
-            .add_event::<ExplosionEvent>()
-            .add_event::<PlayerDeathEvent>()
-            .add_event::<SetupLevel>()
+            .add_message::<ExplosionEvent>()
+            .add_message::<PlayerDeathEvent>()
+            .add_message::<SetupLevel>()
             .insert_resource(GameStartSeconds(0.0))
             .add_systems(OnEnter(AppState::Endless), setup_game)
             .add_systems(OnExit(AppState::Endless), destroy_game)
@@ -130,7 +130,7 @@ fn setup_game(
     mut rapier_config: Query<&mut RapierConfiguration>,
     game_assets: Res<GameAssets>,
     mut game_state: ResMut<NextState<EndlessGameState>>,
-    mut level_events: EventWriter<SetupLevel>,
+    mut level_events: MessageWriter<SetupLevel>,
 ) {
     let mut rapier_config = rapier_config.single_mut().unwrap();
     rapier_config.gravity = Vec2::ZERO;
@@ -330,7 +330,7 @@ fn setup_gameover(
 }
 
 fn setup_level(
-    mut level_event: EventReader<SetupLevel>,
+    mut level_event: MessageReader<SetupLevel>,
     mut game: ResMut<Game>,
     mut game_state: ResMut<NextState<EndlessGameState>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
@@ -709,7 +709,7 @@ fn spawn_ships_and_stars(
 }
 
 fn listen_player_death_endless(
-    mut events: EventReader<PlayerDeathEvent>,
+    mut events: MessageReader<PlayerDeathEvent>,
     mut game_state: ResMut<NextState<EndlessGameState>>,
     mut q_mm_player: Query<&mut Transform, With<MinimapPlayer>>,
     mut minimap: Query<&mut Camera, With<MinimapCamera>>,
@@ -731,7 +731,7 @@ fn star_update(
     mut commands: Commands,
     q_stars: Query<(Entity, &StarCore, &GlobalTransform, &Children)>,
     q_star_node: Query<&StarNode>,
-    mut explosion_events: EventWriter<ExplosionEvent>,
+    mut explosion_events: MessageWriter<ExplosionEvent>,
     mut q_star_timer: Query<&mut StarSpawnTimer>,
 ) {
     for (ent, star, trans, nodes) in q_stars.iter() {
@@ -744,7 +744,7 @@ fn star_update(
 
         if node_count == 0 {
             if let Ok(mut timer) = q_star_timer.single_mut() {
-                if timer.0.finished() {
+                if timer.0.is_finished() {
                     timer.0.set_duration(Duration::from_secs_f32(3.0));
                 }
             }
@@ -767,8 +767,8 @@ fn check_collisions(
     mut q_player: Query<(Entity, &GlobalTransform), With<Player>>,
     q_explodables: Query<(Entity, &GlobalTransform, &Explodable), With<Explodable>>,
     q_collidables: Query<(Entity, &GlobalTransform, &Collidable), With<Collidable>>,
-    mut explosion_events: EventWriter<ExplosionEvent>,
-    mut player_death_events: EventWriter<PlayerDeathEvent>,
+    mut explosion_events: MessageWriter<ExplosionEvent>,
+    mut player_death_events: MessageWriter<PlayerDeathEvent>,
     q_stars: Query<(Entity, &StarCore)>,
     mut q_star_timer: Query<&mut StarSpawnTimer>,
     mut q_star_node_textures: Query<&mut Sprite, With<StarNode>>,
@@ -819,7 +819,7 @@ fn check_collisions(
                                 }
 
                                 if let Ok(mut timer) = q_star_timer.single_mut() {
-                                    if timer.0.finished() {
+                                    if timer.0.is_finished() {
                                         timer.0.set_duration(Duration::from_secs_f32(3.0));
                                     }
                                 }

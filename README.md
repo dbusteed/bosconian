@@ -6,6 +6,12 @@ Play at [https://dbusteed.github.io/bosconian](https://dbusteed.github.io/boscon
 
 <br>
 
+migration todos
+- update all libs
+- text
+- event issues
+- zoom
+
 ## Future Improvements
 - General
     - if player hits two collidables at same time (should only lose one life)

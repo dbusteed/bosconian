@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    audio::{PlaybackMode, PlaybackSettings, Volume}
+};
 
 use super::AppState;
 
@@ -65,6 +68,11 @@ fn setup(
 ) {
     commands.spawn((
         AudioPlayer::new(asset_server.load("sounds/Test.ogg")),
+        PlaybackSettings {
+            mode: PlaybackMode::Loop,
+            volume: Volume::Linear(0.0),
+            ..default()
+        },
         Name::from("Background Music"),
     ));
 
