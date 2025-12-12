@@ -6,13 +6,12 @@ Play at [https://dbusteed.github.io/bosconian](https://dbusteed.github.io/boscon
 
 <br>
 
-migration todos
-- update all libs
-- text
-- event issues
-- zoom
-
-## Future Improvements
+## Future Improvements / TODO
+- Remove all warnings
+- Event issues when playing both modes
+- Resolution on Mac
+- Parralax / better background
+- Save score in localstorage?
 - General
     - if player hits two collidables at same time (should only lose one life)
     - audio

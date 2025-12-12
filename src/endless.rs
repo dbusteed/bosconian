@@ -29,7 +29,7 @@ use super::{
         Countdown,
         CountdownText,
         EnemyShip,
-        EnemyType,
+        // EnemyType,
         Explodable,
         ExplodableType,
         ExplosionEvent,
@@ -143,12 +143,12 @@ fn setup_game(
             ..default()
         },
         Transform::from_xyz(0.0, 0.0, 999.0),
-        // OrthographicProjection {
-        //     scale: 1.25,
-        //     ..default()
-        // },
-        // UiCameraConfig { show_ui: true },
+        Projection::Orthographic(OrthographicProjection {
+            scale: 1.25,
+            ..OrthographicProjection::default_2d()
+        }),
         GameCamera,
+        IsDefaultUiCamera,
         RenderLayers::from_layers(&[0]),
         GameNode,
     ));
@@ -208,24 +208,24 @@ fn setup_game(
     ));
 
     // game score
-    // commands.spawn((
-    //     TextBundle::from_sections([TextSection::new(
-    //         "00:00",
-    //         TextStyle {
-    //             font: game_assets.font.clone(),
-    //             font_size: 32.0,
-    //             color: Color::WHITE,
-    //         },
-    //     )])
-    //     .with_style(Style {
-    //         position_type: PositionType::Absolute,
-    //         top: Val::Px(5.0),
-    //         left: Val::Px(15.0),
-    //         ..default()
-    //     }),
-    //     ScoreText,
-    //     GameNode,
-    // ));
+    commands.spawn((
+        Text::new("00:00"),
+        TextColor(Color::WHITE),
+        TextFont {
+            font: game_assets.font.clone(),
+            font_size: 32.0,
+            ..default()
+        },
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            left: Val::Px(15.0),
+            ..default()
+        },
+        RenderLayers::layer(0),
+        ScoreText,
+        GameNode,
+    ));
 
     // minimap player
     commands.spawn((
@@ -308,6 +308,7 @@ fn setup_gameover(
                         align_items: AlignItems::Center,
                         ..default()
                     },
+                    BorderRadius::all(Val::Px(10.0)),
                     BackgroundColor(Color::BLACK.into()),
                     GameButton {
                         action: GameButtonAction::ReturnToMenu,
@@ -357,9 +358,9 @@ fn update_score(
 ) {
     let seconds = (time.elapsed_secs() - game_start.0) as usize;
     let score = format!("{:02}:{:02}", seconds / 60, seconds % 60);
-    // for mut text in &mut q_level_text {
-    //     text.sections[0].value = score.to_string();
-    // }
+    for mut text in &mut q_level_text {
+        text.0 = score.to_string();
+    }
 }
 
 fn countdown(
@@ -486,12 +487,12 @@ fn spawn_ships_and_stars(
 
     if fighter_count < max_fighters {
         if let Ok(offset) = q_cam_offest.single() {
-            let mut rng = rand::thread_rng();
-            let angle: f32 = rng.gen_range(-PI..PI);
+            let mut rng = rand::rng();
+            let angle: f32 = rng.random_range(-PI..PI);
             let trans = Vec3::new(angle.cos(), angle.sin(), 10.0)
                 * Vec3::new(850.0 * 1.25, 850.0 * 1.25, 1.0)
                 + offset.0;
-            let angle: f32 = rng.gen_range(-PI..PI);
+            let angle: f32 = rng.random_range(-PI..PI);
 
             if rng.gen_bool(0.5) {
                 commands.spawn((
@@ -509,10 +510,10 @@ fn spawn_ships_and_stars(
                     Collider::ball(26.0),
                     Sensor,
                     EnemyShip {
-                        eneny_type: EnemyType::PType,
+                        // eneny_type: EnemyType::PType,
                         target: None,
                         time_got_target: None,
-                        max_time_on_target: 3.0,
+                        // max_time_on_target: 3.0,
                         speed: 250.0,
                         turn_radius: 0.02,
                     },
@@ -542,10 +543,10 @@ fn spawn_ships_and_stars(
                     Collider::ball(26.0),
                     Sensor,
                     EnemyShip {
-                        eneny_type: EnemyType::IType,
+                        // eneny_type: EnemyType::IType,
                         target: None,
                         time_got_target: None,
-                        max_time_on_target: 0.25,
+                        // max_time_on_target: 0.25,
                         speed: 300.0,
                         turn_radius: 0.05,
                     },
@@ -571,14 +572,14 @@ fn spawn_ships_and_stars(
                 star_count += 1;
             }
 
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
 
             if star_count < max_stars {
                 // TODO avoid overlaps
                 // also maybe some buffer from the edge
-                let x = rng.gen_range(-2400.0..=2400.0) as f32;
-                let y = rng.gen_range(-2400.0..=2400.0) as f32;
-                let vert = rng.gen_bool(0.5);
+                let x = rng.random_range(-2400.0..=2400.0) as f32;
+                let y = rng.random_range(-2400.0..=2400.0) as f32;
+                let vert = rng.random_bool(0.5);
 
                 let marker = commands
                     .spawn((

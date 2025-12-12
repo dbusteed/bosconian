@@ -4,6 +4,7 @@ use bevy::{
 };
 use bevy_prototype_lyon::prelude::*;
 use bevy_rapier2d::prelude::*;
+// use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
 mod classic;
 mod endless;
@@ -48,7 +49,7 @@ fn main() {
             // bevy::diagnostic::LogDiagnosticsPlugin::default(),
             // bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
             // EguiPlugin::default(),
-            bevy_inspector_egui::quick::WorldInspectorPlugin::new(),
+            // WorldInspectorPlugin::new(),
             setup::SetupPlugin,
             menu::MenuPlugin,
             classic::ClassicPlugin,

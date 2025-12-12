@@ -65,10 +65,10 @@ pub struct CountdownText;
 
 #[derive(Component)]
 pub struct EnemyShip {
-    pub eneny_type: EnemyType,
+    // pub eneny_type: EnemyType,
     pub target: Option<Vec2>,
     pub time_got_target: Option<f32>,
-    pub max_time_on_target: f32,
+    // pub max_time_on_target: f32,
     pub speed: f32,
     pub turn_radius: f32,
 }
@@ -341,8 +341,8 @@ pub fn move_enemy_ships(
                     }
                 }
             } else {
-                let mut rng = rand::thread_rng();
-                let offset = Vec2::new(rng.gen_range(-100.0..100.0), rng.gen_range(-100.0..100.0));
+                let mut rng = rand::rng();
+                let offset = Vec2::new(rng.random_range(-100.0..100.0), rng.random_range(-100.0..100.0));
                 ship.target = Some(player_pos.0.truncate() + offset);
                 ship.time_got_target = Some(time.elapsed_secs());
             }
@@ -477,9 +477,9 @@ pub fn star_node_shoot(
                 if context.intersection_pair(child, p_ent) == Some(true) {
                     node.0.tick(time.delta());
                     if node.0.is_finished() {
-                        let mut rng = rand::thread_rng();
+                        let mut rng = rand::rng();
                         node.0
-                            .set_duration(Duration::from_secs_f32(rng.gen_range(1.0..4.0)));
+                            .set_duration(Duration::from_secs_f32(rng.random_range(1.0..4.0)));
                         node.0.reset();
 
                         let vel = (p_trans.translation().truncate()

@@ -56,36 +56,29 @@ fn setup_menu(
             Node {
                 position_type: PositionType::Absolute,
                 top: Val::Px(8.0),
-                right: Val::Px(-1000.0 + 48.0 + 8.0),
+                left: Val::Px(8.0),
                 width: Val::Px(48.0),
                 height: Val::Px(48.0),
                 ..default()
             },
-            BackgroundColor::from(Color::WHITE),
-            // Image::new(asset_server.load("github.png")),
+            BackgroundColor::from(Color::BLACK),
             MenuButton {
                 action: MenuButtonAction::VisitRepo,
-                idle_color: Color::srgb(0.70, 0.70, 0.70),
+                idle_color: Color::srgb(0.58, 0.60, 0.69),
                 hover_color: Color::srgb(1.0, 1.0, 1.0),
             },
             Menu,
             Name::from("Menu GitHub"),
-        ));
-        // .with_children(|parent| {
-        //     parent.spawn(
-        //         (
-        //             ImageNode {
-        //                 image: asset_server.load("github.png"),
-        //                 ..default()
-        //             },
-        //             Node {
-        //                 // width: px(256),
-        //                 // height: px(256),
-        //                 ..default()
-        //             }
-        //         ),
-        //     );
-        // });
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                ImageNode {
+                    image: asset_server.load("github.png"),
+                    color: Color::srgb(0.58, 0.60, 0.69),
+                    ..default()
+                },
+            ));
+        });
 
     // menu buttons
     commands
@@ -114,6 +107,7 @@ fn setup_menu(
                         align_items: AlignItems::Center,
                         ..default()
                     },
+                    BorderRadius::all(Val::Px(10.0)),
                     BackgroundColor(Color::srgb(0.86, 0.88, 0.91)),
                     MenuButton {
                         action: MenuButtonAction::Classic,
@@ -127,7 +121,7 @@ fn setup_menu(
                         TextColor(Color::srgb(0.0, 0.0, 0.0)),
                         TextFont {
                             font: game_assets.font.clone(),
-                            font_size: 24.0,
+                            font_size: 26.0,
                             ..default()
                         },
                     ));
@@ -143,6 +137,7 @@ fn setup_menu(
                         align_items: AlignItems::Center,
                         ..default()
                     },
+                    BorderRadius::all(Val::Px(10.0)),
                     BackgroundColor(Color::srgb(0.86, 0.88, 0.91)),
                     MenuButton {
                         action: MenuButtonAction::Endless,
@@ -156,7 +151,7 @@ fn setup_menu(
                         TextColor(Color::srgb(0.0, 0.0, 0.0)),
                         TextFont {
                             font: game_assets.font.clone(),
-                            font_size: 24.0,
+                            font_size: 26.0,
                             ..default()
                         },
                     ));
@@ -174,6 +169,7 @@ fn setup_menu(
                             align_items: AlignItems::Center,
                             ..default()
                         },
+                        BorderRadius::all(Val::Px(10.0)),
                         BackgroundColor(Color::srgb(0.86, 0.88, 0.91)),
                         MenuButton {
                             action: MenuButtonAction::Quit,
@@ -187,7 +183,7 @@ fn setup_menu(
                             TextColor(Color::srgb(0.0, 0.0, 0.0)),
                             TextFont {
                                 font: game_assets.font.clone(),
-                                font_size: 24.0,
+                                font_size: 26.0,
                                 ..default()
                             },
                         ));
@@ -203,26 +199,28 @@ fn button_system(
             &MenuButton,
             &mut BackgroundColor,
             &mut BorderColor,
+            Option<&Children>,
         ),
         (Changed<Interaction>, With<Button>),
     >,
+    mut q_image_nodes: Query<&mut ImageNode>,
     mut game_state: ResMut<NextState<AppState>>,
     mut exit: MessageWriter<AppExit>,
 ) {
     // println!("Button System");
-    for (interaction, button, mut color, mut border_color) in &mut interaction_query {
+    for (interaction, button, mut color, mut border_color, opt_children) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
                 match button.action {
                     MenuButtonAction::Classic => game_state.set(AppState::Classic),
                     MenuButtonAction::Endless => game_state.set(AppState::Endless),
+                    // .write returns the eventID, suppress with ;
                     MenuButtonAction::Quit => {
-                        // .send returns the eventID, suppress with ;
                         exit.write(AppExit::Success);
                     }
                     MenuButtonAction::VisitRepo => {
                         match webbrowser::open(REPO_URL) {
-                            Ok(()) => { /* do nothing, if matched, the command was executed */ }
+                            Ok(()) => {} // do nothing. if matched, the command was executed successfully
                             Err(_) => println!(
                                 "Unable to open browser, check out the code at {}",
                                 REPO_URL
@@ -231,14 +229,36 @@ fn button_system(
                     }
                 }
             }
-            Interaction::Hovered => {
-                *color = button.hover_color.into();
-                border_color.bottom = Color::WHITE;
-            }
-            Interaction::None => {
-                *color = button.idle_color.into();
-                border_color.bottom = Color::BLACK;
-            }
+            Interaction::Hovered => match button.action {
+                MenuButtonAction::VisitRepo => {
+                    if let Some(children) = opt_children {
+                        for child in children.iter() {
+                            if let Ok(mut image_node) = q_image_nodes.get_mut(child) {
+                                image_node.color = button.hover_color.into();
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    *color = button.hover_color.into();
+                    border_color.bottom = Color::WHITE;
+                }
+            },
+            Interaction::None => match button.action {
+                MenuButtonAction::VisitRepo => {
+                    if let Some(children) = opt_children {
+                        for child in children.iter() {
+                            if let Ok(mut image_node) = q_image_nodes.get_mut(child) {
+                                image_node.color = button.idle_color.into();
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    *color = button.idle_color.into();
+                    border_color.bottom = Color::BLACK;
+                }
+            },
         }
     }
 }

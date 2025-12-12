@@ -128,7 +128,6 @@ impl Plugin for ClassicPlugin {
 
 fn setup_game(
     mut commands: Commands,
-    // mut rapier_config: RapierConfiguration,
     mut rapier_config: Query<&mut RapierConfiguration>,
     game_assets: Res<GameAssets>,
     mut game_state: ResMut<NextState<ClassicGameState>>,
@@ -145,11 +144,10 @@ fn setup_game(
             order: 0,
             ..default()
         },
-        // OrthographicProjection {
-        //     scale: 1.25,
-        //     ..default()
-        // },
-        // UiCameraConfig { show_ui: true },
+        Projection::Orthographic(OrthographicProjection {
+            scale: 1.25,
+            ..OrthographicProjection::default_2d()
+        }),
         GameCamera,
         RenderLayers::from_layers(&[0]),
         GameNode,
@@ -167,7 +165,6 @@ fn setup_game(
             }),
             ..default()
         },
-        // UiCameraConfig { show_ui: false },
         MinimapCamera,
         RenderLayers::from_layers(&[1]),
         GameNode,
@@ -178,14 +175,8 @@ fn setup_game(
         Camera2d,
         Camera {
             order: 2,
-            // viewport: Some(Viewport {
-            //     physical_position: UVec2::new(1000 - (46 * 4) - 5, 5),
-            //     physical_size: UVec2::new(46 * 4, 46),
-            //     ..default()
-            // }),
             ..default()
         },
-        // UiCameraConfig { show_ui: false },
         RenderLayers::from_layers(&[2]),
         GameNode,
     ));
@@ -232,25 +223,15 @@ fn setup_game(
         TextColor(Color::WHITE),
         TextFont {
             font: game_assets.font.clone(),
-            font_size: 32.0,
+            font_size: 30.0,
             ..default()
         },
-        //     ),
-        //     TextSection::new(
-        //         "1",
-        //         TextStyle {
-        //             font: game_assets.font.clone(),
-        //             font_size: 32.0,
-        //             color: Color::WHITE,
-        //         },
-        //     ),
-        // ])
-        // .with_style(Style {
-        //     position_type: PositionType::Absolute,
-        //     top: Val::Px(5.0),
-        //     left: Val::Px(15.0),
-        //     ..default()
-        // }),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(5.0),
+            left: Val::Px(15.0),
+            ..default()
+        },
         LevelText,
         GameNode,
     ));
@@ -272,7 +253,7 @@ fn setup_game(
     // Game resource
     commands.insert_resource(Game {
         level: 0,
-        lives: 2, // DEBUG
+        lives: 4,
         countdown: 3,
         setup: false,
         level_start_seconds: 0.0,
@@ -375,6 +356,7 @@ fn setup_gameover(
                         align_items: AlignItems::Center,
                         ..default()
                     },
+                    BorderRadius::all(Val::Px(10.0)),
                     BackgroundColor(Color::BLACK.into()),
                     GameButton {
                         action: GameButtonAction::ReturnToMenu,
@@ -486,8 +468,7 @@ fn countdown(
                 }
 
                 for mut text in &mut q_level_text {
-                    text.0 = "Level 1".to_string();
-                    // text.sections[1].value = game.level.to_string();
+                    text.0 =  format!("Level {}", game.level.to_string());
                 }
 
                 commands.spawn((
@@ -738,7 +719,7 @@ fn spawn_enemy_ships(
 ) {
     // TODO maybe put current level in a Resource
     let level = &levels.0[game.level - 1];
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut max_i = level.start_i;
     let mut max_p = level.start_p;
 
@@ -784,11 +765,11 @@ fn spawn_enemy_ships(
 
     if i_count < max_i && game.itype_timer.is_finished() {
         if let Ok(offset) = q_cam_offest.single() {
-            let angle: f32 = rng.gen_range(-PI..PI);
+            let angle: f32 = rng.random_range(-PI..PI);
             let trans = Vec3::new(angle.cos(), angle.sin(), 10.0)
                 * Vec3::new(650.0 * 1.25, 650.0 * 1.25, 1.0)
                 + offset.0;
-            let angle: f32 = rng.gen_range(-PI..PI);
+            let angle: f32 = rng.random_range(-PI..PI);
 
             commands.spawn((
                 Sprite {
@@ -805,10 +786,10 @@ fn spawn_enemy_ships(
                 Collider::ball(26.0),
                 Sensor,
                 EnemyShip {
-                    eneny_type: EnemyType::IType,
+                    // eneny_type: EnemyType::IType,
                     target: None,
                     time_got_target: None,
-                    max_time_on_target: 0.25,
+                    // max_time_on_target: 0.25,
                     speed: 300.0,
                     turn_radius: 0.05,
                 },
@@ -827,11 +808,11 @@ fn spawn_enemy_ships(
 
     if p_count < max_p && game.ptype_timer.is_finished() {
         if let Ok(offset) = q_cam_offest.single() {
-            let angle: f32 = rng.gen_range(-PI..PI);
+            let angle: f32 = rng.random_range(-PI..PI);
             let trans = Vec3::new(angle.cos(), angle.sin(), 10.0)
                 * Vec3::new(650.0 * 1.25, 650.0 * 1.25, 1.0)
                 + offset.0;
-            let angle: f32 = rng.gen_range(-PI..PI);
+            let angle: f32 = rng.random_range(-PI..PI);
 
             commands.spawn((
                 Sprite {
@@ -848,10 +829,10 @@ fn spawn_enemy_ships(
                 Collider::ball(26.0),
                 Sensor,
                 EnemyShip {
-                    eneny_type: EnemyType::PType,
+                    // eneny_type: EnemyType::PType,
                     target: None,
                     time_got_target: None,
-                    max_time_on_target: 3.0,
+                    // max_time_on_target: 3.0,
                     speed: 250.0,
                     turn_radius: 0.02,
                 },
